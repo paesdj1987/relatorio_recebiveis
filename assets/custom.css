@@ -1,0 +1,17 @@
+/* Remove a borda preta ou linhas indesejadas ao redor de containers e tabelas */
+#table-container, .dash-spreadsheet-container {
+    border: none !important; /* Remove qualquer borda */
+    box-shadow: none !important; /* Remove sombra padrão */
+}
+
+/* Remove borda do elemento table dentro do DataTable */
+.dash-table-container table {
+    border: none !important; /* Remove qualquer borda */
+}
+
+/* Remove borda preta do botão */
+#export-button {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}

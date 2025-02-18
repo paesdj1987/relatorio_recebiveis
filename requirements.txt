@@ -1,0 +1,11 @@
+# bibliotecas instaladas
+
+dash
+dash-bootstrap-components
+pandas
+xlsxWriter
+dash-table
+dash-ag-grid
+openpyxl
+business-duration
+xlsxwriter
