@@ -1,0 +1,8 @@
+services:
+  app:
+    image: 'dash_ticket_junix:latest'
+    build:
+      context: .
+    container_name: dash_ticket_junix
+    ports:
+      - 8053:8053
