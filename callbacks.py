@@ -29,13 +29,19 @@ STATUS_CHAMADO_AINDA_NAO_ATENDIDO = 'Chamado ainda não atendido'
     Input('upload-1', 'contents')
 )
 def store_upload1(contents):
-    if contents is not None:
-        return contents, html.Div(
-            "Upload 1 realizado",
-            style={"textAlign": "center", "color": "green", "fontSize": "0.85rem", "marginTop": "5px"}
+    try:
+        if contents is not None:
+            return contents, html.Div(
+                "Upload 1 realizado",
+                style={"textAlign": "center", "color": "green", "fontSize": "0.85rem", "marginTop": "5px"}
+            )
+        else:
+            return None, ""
+    except Exception as e:
+        return None, html.Div(
+            f"Erro no Upload 1: {str(e)}",
+            style={"textAlign": "center", "color": "red", "fontSize": "0.85rem", "marginTop": "5px"}
         )
-    else:
-        return None, ""
 
 @callback(
     Output('stored-upload-2', 'data'),
@@ -43,13 +49,19 @@ def store_upload1(contents):
     Input('upload-2', 'contents')
 )
 def store_upload2(contents):
-    if contents is not None:
-        return contents, html.Div(
-            "Upload 2 realizado",
-            style={"textAlign": "center", "color": "green", "fontSize": "0.85rem", "marginTop": "5px"}
+    try:
+        if contents is not None:
+            return contents, html.Div(
+                "Upload 2 realizado",
+                style={"textAlign": "center", "color": "green", "fontSize": "0.85rem", "marginTop": "5px"}
+            )
+        else:
+            return None, ""
+    except Exception as e:
+        return None, html.Div(
+            f"Erro no Upload 2: {str(e)}",
+            style={"textAlign": "center", "color": "red", "fontSize": "0.85rem", "marginTop": "5px"}
         )
-    else:
-        return None, ""
 
 # --------------------------------
 # Callback: Confirmar Uploads -> gera o DataFrame unificado e atualiza o Dropdown
@@ -72,7 +84,7 @@ def confirm_upload(n_clicks, content1, content2):
             None
         )
 
-    # -> simulação de processamento
+    # simula processamento
     time.sleep(2)
 
     def parse_contents(contents, sheet_name=0):
@@ -276,7 +288,6 @@ def confirm_upload(n_clicks, content1, content2):
 # --------------------------------
 # Callback: Gerar relatório (inclui filtro e contagens)
 # --------------------------------
-
 @callback(
     Output("output-message", "children"),
     Output("table-container", "style"),
@@ -303,148 +314,167 @@ def confirm_upload(n_clicks, content1, content2):
     Output("filtered-data", "data"),  # <- Store para DF filtrado
     Input("generate-report", "n_clicks"),
     State("merged-data", "data"),
-    State("empreendimento-dropdown", "value"),  # Agora é uma lista se "multi=True"
+    State("empreendimento-dropdown", "value"),  
     prevent_initial_call=True
 )
 def generate_report(n_clicks, merged_data_json, selected_empreendimento):
-    if not merged_data_json:
-        # Retornar 23 valores (um para cada Output)
+    try:
+        if not merged_data_json:
+            # Retornar 23 valores (um para cada Output) se não houver dados
+            return (
+                html.Div("Por favor, confirme os uploads antes de gerar o relatório.", style={"color": "red"}),
+                {"display": "none"},
+                [],
+                [],
+                {"display": "none"},
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                {"display": "none"}, [],
+                {"display": "none"}, [], [],
+                None,
+                None
+            )
+
+        # Converte JSON para DataFrame
+        merged_df = pd.read_json(io.StringIO(merged_data_json), orient='split')
+
+        # Tratar a opção "Todos" e ausência de valor
+        if not selected_empreendimento or "Todos" in selected_empreendimento:
+            # Não filtramos nada
+            df_filtrado = merged_df
+        else:
+            # Filtrar pelos empreendimentos selecionados
+            df_filtrado = merged_df[merged_df["Empreendimento"].isin(selected_empreendimento)]
+
+        if df_filtrado.empty:
+            return (
+                html.Div("Nenhum chamado encontrado para a seleção.", style={"color": "red"}),
+                {"display": "none"},
+                [],
+                [],
+                {"display": "none"},
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                {"display": "none"}, [],
+                {"display": "none"}, [], [],
+                None,
+                None
+            )
+
+        # Cálculos de status
+        status_counts = df_filtrado['Chamados sem interação há 72h'].value_counts()
+        sla_counts = df_filtrado['Chamados atendidos dentro do SLA'].value_counts()
+
+        valor1 = status_counts.get('chamado em atraso', 0)
+        valor2 = status_counts.get('chamado dentro do prazo', 0)
+        valor3 = status_counts.get('chamado finalizado com atraso', 0)
+        valor4 = status_counts.get('chamado finalizado dentro do sla', 0)
+        valor7 = status_counts.get('chamado ainda não atendido', 0)
+
+        valor5 = sla_counts.get('1º atendimento dentro do sla', 0)
+        valor6 = sla_counts.get('1º atendimento fora do sla', 0)
+        valor8 = sla_counts.get('não foi atendido pelo portal', 0)
+
+        total_chamados = df_filtrado.shape[0]
+
+        # TIPO AÇÃO
+        if "TIPO AÇÃO" in df_filtrado.columns:
+            valor_ativa = (df_filtrado["TIPO AÇÃO"] == "Ativa").sum()
+            valor_receptiva = (df_filtrado["TIPO AÇÃO"] == "Receptiva").sum()
+        else:
+            valor_ativa = 0
+            valor_receptiva = 0
+
+        # Top 5 (TITULO3)
+        if "TITULO3" in df_filtrado.columns and not df_filtrado["TITULO3"].dropna().empty:
+            top5_counts = df_filtrado["TITULO3"].value_counts().head(5)
+            top5_data = []
+            for titulo, qtd in top5_counts.items():
+                perc = (qtd / total_chamados) * 100
+                top5_data.append({
+                    "Titulo": titulo,
+                    "Quantidade": qtd,
+                    "Percentual": f"{perc:.2f}%"
+                })
+            top5_container_style = {"display": "block"}
+        else:
+            top5_data = []
+            top5_container_style = {"display": "none"}
+
+        # Agregado por Empreendimento
+        if "Empreendimento" in df_filtrado.columns:
+            aggregated_df = df_filtrado.groupby('Empreendimento').agg({
+                'Nº Ticket': 'count',
+                'Primeira Tratativa (dias)': 'mean',
+                'Última Tratativa (dias)': 'mean',
+                'Prazo Total do Chamado (dias)': 'mean'
+            }).reset_index()
+
+            aggregated_df.rename(columns={
+                'Nº Ticket': 'Quantidade',
+                'Primeira Tratativa (dias)': 'Média Primeira Tratativa (dias)',
+                'Última Tratativa (dias)': 'Média Última Tratativa (dias)',
+                'Prazo Total do Chamado (dias)': 'Média Prazo Total do Chamado (dias)'
+            }, inplace=True)
+
+            aggregated_df['Média Primeira Tratativa (dias)'] = aggregated_df['Média Primeira Tratativa (dias)'].round(2)
+            aggregated_df['Média Última Tratativa (dias)'] = aggregated_df['Média Última Tratativa (dias)'].round(2)
+            aggregated_df['Média Prazo Total do Chamado (dias)'] = aggregated_df['Média Prazo Total do Chamado (dias)'].round(2)
+
+            aggregated_data = aggregated_df.to_dict('records')
+            aggregated_columns = [{"name": i, "id": i} for i in aggregated_df.columns]
+            aggregated_container_style = {"display": "block"}
+        else:
+            aggregated_data = []
+            aggregated_columns = []
+            aggregated_container_style = {"display": "none"}
+
+        # Dados para exibir na tabela principal
+        data = df_filtrado.to_dict('records')
+        columns = [{"name": i, "id": i} for i in df_filtrado.columns]
+
+        # Data/hora do relatório
+        report_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Salvar DF filtrado para export
+        filtered_json = df_filtrado.to_json(orient='split')
+
         return (
-            html.Div("Por favor, confirme os uploads antes de gerar o relatório.", style={"color": "red"}),
+            html.Div("Relatório gerado com sucesso!", style={"color": "green"}),
+            {"display": "block"},
+            data,
+            columns,
+            {"display": "inline-block", "marginBottom": "10px"},
+            valor1, valor2, valor3, valor4,
+            valor5, valor6, valor7, valor8,
+            total_chamados,
+            valor_ativa,
+            valor_receptiva,
+            top5_container_style,
+            top5_data,
+            aggregated_container_style,
+            aggregated_data,
+            aggregated_columns,
+            report_date,
+            filtered_json
+        )
+    except Exception as e:
+        # Loga o erro (pode ser substituído por um logger apropriado)
+        print(f"Erro ao gerar relatório: {e}")
+        return (
+            html.Div(f"Erro ao gerar relatório: {str(e)}", style={"color": "red"}),
             {"display": "none"},
             [],
             [],
             {"display": "none"},
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            {"display": "none"}, [],
-            {"display": "none"}, [], [],
+            {"display": "none"},
+            [],
+            {"display": "none"},
+            [],
+            [],
             None,
             None
         )
 
-    # Converte JSON para DataFrame
-    merged_df = pd.read_json(io.StringIO(merged_data_json), orient='split')
-
-    # selected_empreendimento é uma lista se multi=True.
-    # Tratar a opção "Todos" e ausência de valor
-    if not selected_empreendimento or "Todos" in selected_empreendimento:
-        # Não filtramos nada
-        df_filtrado = merged_df
-    else:
-        # Filtrar pelos empreendimentos selecionados
-        df_filtrado = merged_df[merged_df["Empreendimento"].isin(selected_empreendimento)]
-
-    if df_filtrado.empty:
-        return (
-            html.Div("Nenhum chamado encontrado para a seleção.", style={"color": "red"}),
-            {"display": "none"},
-            [],
-            [],
-            {"display": "none"},
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            {"display": "none"}, [],
-            {"display": "none"}, [], [],
-            None,
-            None
-        )
-
-    # Cálculos de status
-    status_counts = df_filtrado['Chamados sem interação há 72h'].value_counts()
-    sla_counts = df_filtrado['Chamados atendidos dentro do SLA'].value_counts()
-
-    valor1 = status_counts.get('chamado em atraso', 0)
-    valor2 = status_counts.get('chamado dentro do prazo', 0)
-    valor3 = status_counts.get('chamado finalizado com atraso', 0)
-    valor4 = status_counts.get('chamado finalizado dentro do sla', 0)
-    valor7 = status_counts.get('chamado ainda não atendido', 0)
-
-    valor5 = sla_counts.get('1º atendimento dentro do sla', 0)
-    valor6 = sla_counts.get('1º atendimento fora do sla', 0)
-    valor8 = sla_counts.get('não foi atendido pelo portal', 0)
-
-    total_chamados = df_filtrado.shape[0]
-
-    # TIPO AÇÃO
-    if "TIPO AÇÃO" in df_filtrado.columns:
-        valor_ativa = (df_filtrado["TIPO AÇÃO"] == "Ativa").sum()
-        valor_receptiva = (df_filtrado["TIPO AÇÃO"] == "Receptiva").sum()
-    else:
-        valor_ativa = 0
-        valor_receptiva = 0
-
-    # Top 5 (TITULO3)
-    if "TITULO3" in df_filtrado.columns and not df_filtrado["TITULO3"].dropna().empty:
-        top5_counts = df_filtrado["TITULO3"].value_counts().head(5)
-        top5_data = []
-        for titulo, qtd in top5_counts.items():
-            perc = (qtd / total_chamados) * 100
-            top5_data.append({
-                "Titulo": titulo,
-                "Quantidade": qtd,
-                "Percentual": f"{perc:.2f}%"
-            })
-        top5_container_style = {"display": "block"}
-    else:
-        top5_data = []
-        top5_container_style = {"display": "none"}
-
-    # Agregado por Empreendimento
-    if "Empreendimento" in df_filtrado.columns:
-        aggregated_df = df_filtrado.groupby('Empreendimento').agg({
-            'Nº Ticket': 'count',
-            'Primeira Tratativa (dias)': 'mean',
-            'Última Tratativa (dias)': 'mean',
-            'Prazo Total do Chamado (dias)': 'mean'
-        }).reset_index()
-
-        aggregated_df.rename(columns={
-            'Nº Ticket': 'Quantidade',
-            'Primeira Tratativa (dias)': 'Média Primeira Tratativa (dias)',
-            'Última Tratativa (dias)': 'Média Última Tratativa (dias)',
-            'Prazo Total do Chamado (dias)': 'Média Prazo Total do Chamado (dias)'
-        }, inplace=True)
-
-        aggregated_df['Média Primeira Tratativa (dias)'] = aggregated_df['Média Primeira Tratativa (dias)'].round(2)
-        aggregated_df['Média Última Tratativa (dias)'] = aggregated_df['Média Última Tratativa (dias)'].round(2)
-        aggregated_df['Média Prazo Total do Chamado (dias)'] = aggregated_df['Média Prazo Total do Chamado (dias)'].round(2)
-
-        aggregated_data = aggregated_df.to_dict('records')
-        aggregated_columns = [{"name": i, "id": i} for i in aggregated_df.columns]
-        aggregated_container_style = {"display": "block"}
-    else:
-        aggregated_data = []
-        aggregated_columns = []
-        aggregated_container_style = {"display": "none"}
-
-    # Dados para exibir na tabela principal
-    data = df_filtrado.to_dict('records')
-    columns = [{"name": i, "id": i} for i in df_filtrado.columns]
-
-    # Data/hora do relatório
-    report_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    # Salvar DF filtrado para export
-    filtered_json = df_filtrado.to_json(orient='split')
-
-    return (
-        html.Div("Relatório gerado com sucesso!", style={"color": "green"}),
-        {"display": "block"},
-        data,
-        columns,
-        {"display": "inline-block", "marginBottom": "10px"},
-        valor1, valor2, valor3, valor4,
-        valor5, valor6, valor7, valor8,
-        total_chamados,
-        valor_ativa,
-        valor_receptiva,
-        top5_container_style,
-        top5_data,
-        aggregated_container_style,
-        aggregated_data,
-        aggregated_columns,
-        report_date,
-        filtered_json  # <- Store DF filtrado
-    )
 
 # --------------------------------
 # Callback: Exportar relatório Excel
@@ -457,30 +487,34 @@ def generate_report(n_clicks, merged_data_json, selected_empreendimento):
     prevent_initial_call=True
 )
 def export_to_excel(n_clicks, filtered_data_json, report_date):
-    if n_clicks > 0 and filtered_data_json is not None:
-        df_filtered = pd.read_json(io.StringIO(filtered_data_json), orient='split')
+    try:
+        if n_clicks > 0 and filtered_data_json is not None:
+            df_filtered = pd.read_json(io.StringIO(filtered_data_json), orient='split')
 
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter', datetime_format='dd/mm/yyyy hh:mm:ss') as writer:
-            df_filtered.to_excel(writer, index=False, sheet_name='Relatório', startrow=1)
-            workbook = writer.book
-            worksheet = writer.sheets['Relatório']
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter', datetime_format='dd/mm/yyyy hh:mm:ss') as writer:
+                df_filtered.to_excel(writer, index=False, sheet_name='Relatório', startrow=1)
+                workbook = writer.book
+                worksheet = writer.sheets['Relatório']
 
-            worksheet.write(0, 0, "Data")
-            worksheet.write(0, 1, report_date)
+                worksheet.write(0, 0, "Data")
+                worksheet.write(0, 1, report_date)
 
-            date_format = workbook.add_format({'num_format': 'dd/mm/yyyy hh:mm:ss'})
-            number_format = workbook.add_format({'num_format': '0'})
+                date_format = workbook.add_format({'num_format': 'dd/mm/yyyy hh:mm:ss'})
+                number_format = workbook.add_format({'num_format': '0'})
 
-            for idx, col in enumerate(df_filtered.columns):
-                if col in date_columns:
-                    worksheet.set_column(idx, idx, 20, date_format)
-                elif col in ['Nº Ticket', 'Nº']:
-                    worksheet.set_column(idx, idx, 20, number_format)
-                else:
-                    worksheet.set_column(idx, idx, 20)
+                for idx, col in enumerate(df_filtered.columns):
+                    if col in date_columns:
+                        worksheet.set_column(idx, idx, 20, date_format)
+                    elif col in ['Nº Ticket', 'Nº']:
+                        worksheet.set_column(idx, idx, 20, number_format)
+                    else:
+                        worksheet.set_column(idx, idx, 20)
 
-        output.seek(0)
-        return dcc.send_bytes(output.read(), filename="relatorio_final.xlsx")
-    else:
+            output.seek(0)
+            return dcc.send_bytes(output.read(), filename="relatorio_final.xlsx")
+        else:
+            return None
+    except Exception as e:
+        print(f"Erro na exportação: {e}")
         return None
