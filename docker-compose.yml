@@ -5,4 +5,4 @@ services:
       context: .
     container_name: dash_ticket_junix
     ports:
-      - 8053:8053
+      - 8054:8054
