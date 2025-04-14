@@ -108,8 +108,40 @@ def confirm_upload(n_clicks, content1, content2):
             errors='ignore'
         )
 
-        # Merge
-        merged_df = pd.merge(df1, df2, left_on="Nº Ticket", right_on="Nº", how="outer")
+        # Renomeia as colunas originais 
+        df1 = df1.rename(columns={'Nº Ticket': 'ticket_raw'})
+        df2 = df2.rename(columns={'Nº': 'ticket_raw'})
+
+        def normalizar_ticket(col):
+            """
+            Converte qualquer coisa em string, remove espaços, tira .0, 
+            mantém só dígitos e devolve como Int64 (suporta nulos).
+            """
+            return (
+                col.astype(str)                  # vira texto
+                .str.strip()                  # tira espaços
+                .str.replace(r'\.0$', '', regex=True)  # remove '.0'
+                .str.extract(r'(\d+)', expand=False)   # deixa só números
+                .astype('Int64')              # Int64 (permite NaN)
+            )
+
+        df1['ticket_key'] = normalizar_ticket(df1['ticket_raw'])
+        df2['ticket_key'] = normalizar_ticket(df2['ticket_raw'])
+
+        # Merge pela coluna chave limpa
+        merged_df = pd.merge(
+            df1,
+            df2,
+            on='ticket_key',
+            how='outer',
+            suffixes=('_df1', '_df2')
+        )
+
+        # Remove colunas auxiliares usadas no merge
+        merged_df.drop(columns=['ticket_raw_df1', 'ticket_raw_df2'], inplace=True, errors='ignore')
+
+        # Renomeia a chave final se quiser manter a nomenclatura original
+        merged_df.rename(columns={'ticket_key': 'Nº Ticket'}, inplace=True)
 
         # Converter colunas de data
         for col in date_columns:
