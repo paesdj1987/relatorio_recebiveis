@@ -26,42 +26,45 @@ STATUS_CHAMADO_AINDA_NAO_ATENDIDO = 'Chamado ainda não atendido'
 @callback(
     Output('stored-upload-1', 'data'),
     Output('upload-1-status', 'children'),
-    Input('upload-1', 'contents')
+    Input('upload-1', 'contents'),
+    State('upload-1', 'filename')
 )
-def store_upload1(contents):
+def store_upload1(contents, filename):
     try:
         if contents is not None:
             return contents, html.Div(
-                "Upload 1 realizado",
+                f"Upload realizado: {filename}",
                 style={"textAlign": "center", "color": "green", "fontSize": "0.85rem", "marginTop": "5px"}
             )
         else:
             return None, ""
     except Exception as e:
         return None, html.Div(
-            f"Erro no Upload 1: {str(e)}",
+            f"Erro no Upload: {str(e)}",
             style={"textAlign": "center", "color": "red", "fontSize": "0.85rem", "marginTop": "5px"}
         )
 
 @callback(
     Output('stored-upload-2', 'data'),
     Output('upload-2-status', 'children'),
-    Input('upload-2', 'contents')
+    Input('upload-2', 'contents'),
+    State('upload-2', 'filename')
 )
-def store_upload2(contents):
+def store_upload2(contents, filename):
     try:
         if contents is not None:
             return contents, html.Div(
-                "Upload 2 realizado",
+                f"Upload realizado: {filename}",
                 style={"textAlign": "center", "color": "green", "fontSize": "0.85rem", "marginTop": "5px"}
             )
         else:
             return None, ""
     except Exception as e:
         return None, html.Div(
-            f"Erro no Upload 2: {str(e)}",
+            f"Erro no Upload: {str(e)}",
             style={"textAlign": "center", "color": "red", "fontSize": "0.85rem", "marginTop": "5px"}
         )
+
 
 # --------------------------------
 # Callback: Confirmar Uploads -> gera o DataFrame unificado e atualiza o Dropdown
@@ -97,6 +100,25 @@ def confirm_upload(n_clicks, content1, content2):
         df1 = parse_contents(content1, sheet_name="TicketsChamados")
         df2 = parse_contents(content2, sheet_name=0)
 
+        # ------------------ Validação de colunas obrigatórias ------------------
+        obrigatorias_df1 = {"Nº Ticket"}
+        obrigatorias_df2 = {"DT. ABERTURA", "Nº", "ORIGEM", "DT. FINALIZAÇÃO", "DT. INICIO ETAPA"}
+        faltando_df1 = obrigatorias_df1 - set(df1.columns)
+        faltando_df2 = obrigatorias_df2 - set(df2.columns)
+        if faltando_df1 or faltando_df2:
+            msgs = []
+            if faltando_df1:
+                msgs.append(f"A(s) coluna(s) {', '.join(sorted(faltando_df1))} não está(ão) presente(s) na planilha 'Relatório Geral - Tickets CRM'. Você exportou a planilha de forma equivocada do Junix.")
+            if faltando_df2:
+                msgs.append(f"A(s) coluna(s) {', '.join(sorted(faltando_df2))} não está(ão) presente(s) na planilha 'Dados'. Você exportou a planilha de forma equivocada do Junix.")
+            return (
+                [],
+                html.Div(" ".join(msgs),
+                         style={"color": "red", "textAlign": "center", "fontSize": "0.85rem", "marginTop": "5px"}),
+                None
+            )
+        # ------------------------------------------------------------------------
+
         # Excluir colunas indesejadas
         df1 = df1.drop(
             columns=['Tipo Ticket', 'Status Ticket', 'Data Abertura', 'Data Finalizado', 'Assunto'],
@@ -118,11 +140,11 @@ def confirm_upload(n_clicks, content1, content2):
             mantém só dígitos e devolve como Int64 (suporta nulos).
             """
             return (
-                col.astype(str)                  # vira texto
-                .str.strip()                  # tira espaços
-                .str.replace(r'\.0$', '', regex=True)  # remove '.0'
-                .str.extract(r'(\d+)', expand=False)   # deixa só números
-                .astype('Int64')              # Int64 (permite NaN)
+                col.astype(str)
+                   .str.strip()
+                   .str.replace(r'\.0$', '', regex=True)
+                   .str.extract(r'(\d+)', expand=False)
+                   .astype('Int64')
             )
 
         df1['ticket_key'] = normalizar_ticket(df1['ticket_raw'])
@@ -153,7 +175,7 @@ def confirm_upload(n_clicks, content1, content2):
         if 'DT. ABERTURA' in merged_df.columns:
             merged_df = merged_df[merged_df['DT. ABERTURA'] >= filtro_data]
 
-        # --- Funções para calcular prazos ---
+        # --- Funções para calcular prazos (sem alterações) ---
         def calculate_first_treatment(row):
             start = row["DT. ABERTURA"]
             end = row["DT. INICIO ETAPA"]
@@ -193,7 +215,6 @@ def confirm_upload(n_clicks, content1, content2):
                 duration_days += 1
             return duration_days
 
-        # SLA do primeiro atendimento
         def sla_compliance(row):
             origem = row.get("ORIGEM")
             if origem == "E-mail OR":
@@ -206,7 +227,6 @@ def confirm_upload(n_clicks, content1, content2):
             else:
                 return "1º atendimento fora do SLA"
 
-        # Status do chamado
         def determine_status(row):
             origem = str(row.get("ORIGEM", "")).strip().lower()
             if origem == "e-mail or":
@@ -221,7 +241,6 @@ def confirm_upload(n_clicks, content1, content2):
             if pd.isnull(inicio_etapa):
                 return STATUS_CHAMADO_AINDA_NAO_ATENDIDO
             elif pd.isnull(finalizacao):
-                # Chamado em andamento
                 start_date = np.datetime64(inicio_etapa.date())
                 current_date = np.datetime64(datetime.datetime.now().date())
                 duration_days = np.busday_count(start_date, current_date)
@@ -230,34 +249,31 @@ def confirm_upload(n_clicks, content1, content2):
                 else:
                     return STATUS_CHAMADO_DENTRO_DO_PRAZO
             else:
-                # Chamado finalizado
                 start_date = np.datetime64(inicio_etapa.date())
                 end_date = np.datetime64(finalizacao.date())
                 duration_days = np.busday_count(start_date, end_date)
                 if np.is_busday(end_date):
                     duration_days += 1
 
-                # Se TITULO3 for especial, SLA = 10
                 if titulo3 in titulos_especiais:
                     if duration_days <= 10:
                         return STATUS_CHAMADO_FINALIZADO_DENTRO_DO_SLA
                     else:
                         return STATUS_CHAMADO_FINALIZADO_FORA_DO_SLA
                 else:
-                    # SLA padrão = 3
                     if duration_days <= 3:
                         return STATUS_CHAMADO_FINALIZADO_DENTRO_DO_SLA
                     else:
                         return STATUS_CHAMADO_FINALIZADO_FORA_DO_SLA
+        # --------------------------------------------------------
 
-        # Aplica funções
+        # Aplica funções de cálculo
         merged_df["Primeira Tratativa (dias)"] = merged_df.apply(calculate_first_treatment, axis=1)
         merged_df["Última Tratativa (dias)"] = merged_df.apply(calculate_last_treatment, axis=1)
         merged_df["Prazo Total do Chamado (dias)"] = merged_df.apply(calculate_total_duration, axis=1)
         merged_df["Chamados atendidos dentro do SLA"] = merged_df.apply(sla_compliance, axis=1)
         merged_df["Chamados sem interação há 72h"] = merged_df.apply(determine_status, axis=1)
 
-        # Ajuste de texto
         merged_df['Chamados sem interação há 72h'] = (
             merged_df['Chamados sem interação há 72h'].str.strip().str.lower()
         )
@@ -265,57 +281,48 @@ def confirm_upload(n_clicks, content1, content2):
             merged_df['Chamados atendidos dentro do SLA'].str.strip().str.lower()
         )
 
-        # Converter datas p/ string
         for col in date_columns:
             if col in merged_df.columns:
                 merged_df[col] = merged_df[col].dt.strftime('%d/%m/%Y %H:%M:%S').fillna('')
 
-        # Converte colunas numéricas
         numeric_columns = ['Primeira Tratativa (dias)', 'Última Tratativa (dias)', 'Prazo Total do Chamado (dias)']
         for col in numeric_columns:
             merged_df[col] = pd.to_numeric(merged_df[col], errors='coerce')
 
-        # Opções p/ Dropdown
         if "Empreendimento" in merged_df.columns:
             empreendimentos_unicos = merged_df["Empreendimento"].dropna().unique()
-            empreendimentos_unicos = sorted(empreendimentos_unicos)  # Ordenação opcional
+            empreendimentos_unicos = sorted(empreendimentos_unicos)
             dropdown_options = [{"label": "Todos", "value": "Todos"}] + [
                 {"label": emp, "value": emp} for emp in empreendimentos_unicos
             ]
         else:
             dropdown_options = []
 
-        # Salvar DF em JSON
         merged_json = merged_df.to_json(orient="split")
 
         return (
             dropdown_options,
-            html.Div(
-                "Uploads confirmados!",
-                style={
-                    "textAlign": "center",
-                    "color": "green",
-                    "fontSize": "0.85rem",
-                    "marginTop": "5px"
-                }
-            ),
+            html.Div("Uploads confirmados!", style={
+                "textAlign": "center",
+                "color": "green",
+                "fontSize": "0.85rem",
+                "marginTop": "5px"
+            }),
             merged_json
         )
 
     except Exception as e:
         return (
             [],
-            html.Div(
-                f"Ocorreu um erro ao confirmar uploads: {e}",
-                style={
-                    "color": "red",
-                    "textAlign": "center",
-                    "fontSize": "0.85rem",
-                    "marginTop": "5px"
-                }
-            ),
+            html.Div(f"Ocorreu um erro ao confirmar uploads: {e}", style={
+                "color": "red",
+                "textAlign": "center",
+                "fontSize": "0.85rem",
+                "marginTop": "5px"
+            }),
             None
         )
+
 
 # --------------------------------
 # Callback: Gerar relatório (inclui filtro e contagens)
