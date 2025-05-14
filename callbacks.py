@@ -1,18 +1,23 @@
+#callbacks
+
 import pandas as pd
 from dash import Input, Output, State, callback, dcc, html, dash_table
+from dash.dependencies import Input, Output, State
 from feriados import get_busdaycalendar_with_holidays
+from dash.exceptions import PreventUpdate   
 import io
 import base64
 import warnings
 import numpy as np
 import datetime
 import time
+import math
 
 warnings.simplefilter("ignore", UserWarning)
 
-date_columns = ["DT. INICIO ETAPA", "DT. ABERTURA", "DT. FINALIZAÇÃO"]
+date_columns = ["DT. INICIO ETAPA", "Data Abertura", "DT. FINALIZAÇÃO"]
 
-# Status (para consistência, manter nomes originais)
+# Status 
 STATUS_CHAMADO_EM_ATRASO = 'Chamado em atraso'
 STATUS_CHAMADO_DENTRO_DO_PRAZO = 'Chamado dentro do prazo'
 STATUS_CHAMADO_FINALIZADO_FORA_DO_SLA = 'Chamado finalizado com atraso'
@@ -65,7 +70,6 @@ def store_upload2(contents, filename):
             style={"textAlign": "center", "color": "red", "fontSize": "0.85rem", "marginTop": "5px"}
         )
 
-
 # --------------------------------
 # Callback: Confirmar Uploads -> gera o DataFrame unificado e atualiza o Dropdown
 # --------------------------------
@@ -101,31 +105,30 @@ def confirm_upload(n_clicks, content1, content2):
         df2 = parse_contents(content2, sheet_name=0)
 
         # ------------------ Validação de colunas obrigatórias ------------------
-        obrigatorias_df1 = {"Nº Ticket"}
-        obrigatorias_df2 = {"DT. ABERTURA", "Nº", "ORIGEM", "DT. FINALIZAÇÃO", "DT. INICIO ETAPA"}
+        obrigatorias_df1 = {"Data Abertura","Nº Ticket"}
+        obrigatorias_df2 = {"Nº", "ORIGEM", "EMPREEND.", "DT. FINALIZAÇÃO", "DT. INICIO ETAPA"}
         faltando_df1 = obrigatorias_df1 - set(df1.columns)
         faltando_df2 = obrigatorias_df2 - set(df2.columns)
         if faltando_df1 or faltando_df2:
             msgs = []
             if faltando_df1:
-                msgs.append(f"A(s) coluna(s) {', '.join(sorted(faltando_df1))} não está(ão) presente(s) na planilha 'Relatório Geral - Tickets CRM'. Você exportou a planilha de forma equivocada do Junix.")
+                msgs.append(f"A(s) coluna(s) {', '.join(sorted(faltando_df1))} não está(ão) presente(s) na planilha 'Relatório Geral - Tickets CRM'. Você exportou a planilha 'Relatório Geral - Tickets' faltando colunas.")
             if faltando_df2:
-                msgs.append(f"A(s) coluna(s) {', '.join(sorted(faltando_df2))} não está(ão) presente(s) na planilha 'Dados'. Você exportou a planilha de forma equivocada do Junix.")
+                msgs.append(f"A(s) coluna(s) {', '.join(sorted(faltando_df2))} não está(ão) presente(s) na planilha 'Dados'. Você exportou a planilha 'Dados' faltando colunas.")
             return (
                 [],
                 html.Div(" ".join(msgs),
                          style={"color": "red", "textAlign": "center", "fontSize": "0.85rem", "marginTop": "5px"}),
                 None
             )
-        # ------------------------------------------------------------------------
 
         # Excluir colunas indesejadas
         df1 = df1.drop(
-            columns=['Tipo Ticket', 'Status Ticket', 'Data Abertura', 'Data Finalizado', 'Assunto'],
+            columns=['Tipo Ticket', 'Status Ticket', 'Data Finalizado', 'Assunto'],
             errors='ignore'
         )
         df2 = df2.drop(
-            columns=['TITULO', 'SINTESE', 'RESPONSÁVEL', 'TICKET AGRUPADO', 'PRAZO TICKET', 'PRAZO ETAPA',
+            columns=['DT. ABERTURA', 'EMPREEND.', 'BLOCO', 'UNIDADE','TITULO', 'SINTESE', 'RESPONSÁVEL', 'TICKET AGRUPADO', 'PRAZO TICKET', 'PRAZO ETAPA',
                      'USUÁRIO CADASTRO', 'COD. UNIDADE CLIENTE', 'CLASSIFICACAO', 'TICKETS VINCULADOS'],
             errors='ignore'
         )
@@ -165,6 +168,12 @@ def confirm_upload(n_clicks, content1, content2):
         # Renomeia a chave final se quiser manter a nomenclatura original
         merged_df.rename(columns={'ticket_key': 'Nº Ticket'}, inplace=True)
 
+        # Verifica se "Data Abertura" está em timestamp numérico (milissegundos) e converte se necessário
+        if 'Data Abertura' in merged_df.columns:
+            if pd.api.types.is_numeric_dtype(merged_df["Data Abertura"]):
+                merged_df["Data Abertura"] = pd.to_datetime(merged_df["Data Abertura"], unit="ms", errors="coerce")
+
+
         # Converter colunas de data
         for col in date_columns:
             if col in merged_df.columns:
@@ -172,48 +181,162 @@ def confirm_upload(n_clicks, content1, content2):
 
         # Filtro de data (apenas chamados a partir de 01/10/2024)
         filtro_data = pd.Timestamp("2024-10-01 00:00:00")
-        if 'DT. ABERTURA' in merged_df.columns:
-            merged_df = merged_df[merged_df['DT. ABERTURA'] >= filtro_data]
+        if 'Data Abertura' in merged_df.columns:
+            merged_df = merged_df[merged_df['Data Abertura'] >= filtro_data]
 
-        # --- Funções para calcular prazos (sem alterações) ---
+        # --------------------- Funções para calcular prazos (sem alterações) ---------------------
+
+        SECONDS_IN_DAY = 24 * 60 * 60
+
         def calculate_first_treatment(row):
-            start = row["DT. ABERTURA"]
-            end = row["DT. INICIO ETAPA"]
+            start = row["Data Abertura"]
+            end   = row["DT. INICIO ETAPA"]
+
+            # 1) Nulos
             if pd.isnull(start) or pd.isnull(end):
-                return None
-            bus_cal = get_busdaycalendar_with_holidays(start, end)
+                return None, None
+
+            # 2) Ordem cronológica
+            if start > end:
+                start, end = end, start
+
+            # 3) Mesma data → 0 dias e horas completas
+            delta = end - start
+            if start.date() == end.date():
+                duration_days = 0
+                duration_hours = int(delta.total_seconds() // 3600)
+                return duration_days, duration_hours
+
+            # 4) Calendário de dias úteis
+            bus_cal    = get_busdaycalendar_with_holidays(start, end)
             start_date = np.datetime64(start.date())
-            end_date = np.datetime64(end.date())
-            duration_days = np.busday_count(start_date, end_date, busdaycal=bus_cal)
+            end_date   = np.datetime64(end.date())
+
+            # 5) Dias úteis completos (exclui extremos, trunca negativo)
+            full_days = np.busday_count(
+                start_date + np.timedelta64(1, "D"),
+                end_date,
+                busdaycal=bus_cal
+            )
+            if full_days < 0:
+                full_days = 0
+
+            # 6) Segundos totais = dias completos + frações do primeiro/último dia
+            total_secs = full_days * SECONDS_IN_DAY
+            if np.is_busday(start_date, busdaycal=bus_cal):
+                fim = datetime.datetime.combine(start.date(), datetime.time.max)
+                total_secs += (fim - start).total_seconds()
             if np.is_busday(end_date, busdaycal=bus_cal):
-                duration_days += 1
-            return duration_days
+                inicio = datetime.datetime.combine(end.date(), datetime.time.min)
+                total_secs += (end - inicio).total_seconds()
+
+            # 7) Converte para dias (ceil: resto vira 1 dia)
+            duration_days = math.ceil(total_secs / SECONDS_IN_DAY)
+
+            # 8) Horas completas brutas
+            duration_hours = int(delta.total_seconds() // 3600)
+
+            return duration_days, duration_hours
+
 
         def calculate_last_treatment(row):
             start = row["DT. INICIO ETAPA"]
-            end = row["DT. FINALIZAÇÃO"]
+            end   = row["DT. FINALIZAÇÃO"]
+
+            # 1) Nulos
             if pd.isnull(start) or pd.isnull(end):
-                return None
-            bus_cal = get_busdaycalendar_with_holidays(start, end)
+                return None, None
+
+            # 2) Ordem cronológica
+            if start > end:
+                start, end = end, start
+
+            # 3) Mesma data → 0 dias e horas completas
+            delta = end - start
+            if start.date() == end.date():
+                duration_days = 0
+                duration_hours = int(delta.total_seconds() // 3600)
+                return duration_days, duration_hours
+
+            # 4) Calendário de dias úteis
+            bus_cal    = get_busdaycalendar_with_holidays(start, end)
             start_date = np.datetime64(start.date())
-            end_date = np.datetime64(end.date())
-            duration_days = np.busday_count(start_date, end_date, busdaycal=bus_cal)
+            end_date   = np.datetime64(end.date())
+
+            # 5) Dias úteis completos (exclui extremos, trunca negativo)
+            full_days = np.busday_count(
+                start_date + np.timedelta64(1, "D"),
+                end_date,
+                busdaycal=bus_cal
+            )
+            if full_days < 0:
+                full_days = 0
+
+            # 6) Segundos totais = dias completos + frações do primeiro/último dia
+            total_secs = full_days * SECONDS_IN_DAY
+            if np.is_busday(start_date, busdaycal=bus_cal):
+                fim = datetime.datetime.combine(start.date(), datetime.time.max)
+                total_secs += (fim - start).total_seconds()
             if np.is_busday(end_date, busdaycal=bus_cal):
-                duration_days += 1
-            return duration_days
+                inicio = datetime.datetime.combine(end.date(), datetime.time.min)
+                total_secs += (end - inicio).total_seconds()
+
+            # 7) Converte para dias (resto vira 1 dia)
+            duration_days = math.ceil(total_secs / SECONDS_IN_DAY)
+            # 8) Horas completas brutas
+            duration_hours = int(delta.total_seconds() // 3600)
+
+            return duration_days, duration_hours
+
 
         def calculate_total_duration(row):
-            start = row["DT. ABERTURA"]
-            end = row["DT. FINALIZAÇÃO"]
+            start = row["Data Abertura"]
+            end   = row["DT. FINALIZAÇÃO"]
+
+            # 1) Nulos
             if pd.isnull(start) or pd.isnull(end):
-                return None
-            bus_cal = get_busdaycalendar_with_holidays(start, end)
+                return None, None
+
+            # 2) Ordem cronológica
+            if start > end:
+                start, end = end, start
+
+            # 3) Mesma data → 0 dias e horas completas
+            delta = end - start
+            if start.date() == end.date():
+                duration_days = 0
+                duration_hours = int(delta.total_seconds() // 3600)
+                return duration_days, duration_hours
+
+            # 4) Calendário de dias úteis
+            bus_cal    = get_busdaycalendar_with_holidays(start, end)
             start_date = np.datetime64(start.date())
-            end_date = np.datetime64(end.date())
-            duration_days = np.busday_count(start_date, end_date, busdaycal=bus_cal)
+            end_date   = np.datetime64(end.date())
+
+            # 5) Dias úteis completos (exclui extremos, trunca negativo)
+            full_days = np.busday_count(
+                start_date + np.timedelta64(1, "D"),
+                end_date,
+                busdaycal=bus_cal
+            )
+            if full_days < 0:
+                full_days = 0
+
+            # 6) Segundos totais = dias completos + frações do primeiro/último dia
+            total_secs = full_days * SECONDS_IN_DAY
+            if np.is_busday(start_date, busdaycal=bus_cal):
+                fim = datetime.datetime.combine(start.date(), datetime.time.max)
+                total_secs += (fim - start).total_seconds()
             if np.is_busday(end_date, busdaycal=bus_cal):
-                duration_days += 1
-            return duration_days
+                inicio = datetime.datetime.combine(end.date(), datetime.time.min)
+                total_secs += (end - inicio).total_seconds()
+
+            # 7) Converte para dias (ceil: resto vira 1 dia)
+            duration_days = math.ceil(total_secs / SECONDS_IN_DAY)
+            # 8) Horas completas brutas
+            duration_hours = int(delta.total_seconds() // 3600)
+
+            return duration_days, duration_hours
 
         def sla_compliance(row):
             origem = row.get("ORIGEM")
@@ -251,8 +374,9 @@ def confirm_upload(n_clicks, content1, content2):
             else:
                 start_date = np.datetime64(inicio_etapa.date())
                 end_date = np.datetime64(finalizacao.date())
-                duration_days = np.busday_count(start_date, end_date)
-                if np.is_busday(end_date):
+                bus_cal = get_busdaycalendar_with_holidays(inicio_etapa, finalizacao)
+                duration_days = np.busday_count(start_date, end_date, busdaycal=bus_cal)
+                if np.is_busday(end_date, busdaycal=bus_cal):
                     duration_days += 1
 
                 if titulo3 in titulos_especiais:
@@ -265,12 +389,24 @@ def confirm_upload(n_clicks, content1, content2):
                         return STATUS_CHAMADO_FINALIZADO_DENTRO_DO_SLA
                     else:
                         return STATUS_CHAMADO_FINALIZADO_FORA_DO_SLA
+
         # --------------------------------------------------------
 
         # Aplica funções de cálculo
-        merged_df["Primeira Tratativa (dias)"] = merged_df.apply(calculate_first_treatment, axis=1)
-        merged_df["Última Tratativa (dias)"] = merged_df.apply(calculate_last_treatment, axis=1)
-        merged_df["Prazo Total do Chamado (dias)"] = merged_df.apply(calculate_total_duration, axis=1)
+        resultados = merged_df.apply(calculate_first_treatment, axis=1, result_type='expand')
+        merged_df["Primeira Tratativa (dias)"] = resultados[0]
+        merged_df["Primeira Tratativa (horas)"] = resultados[1]
+        # aplica e desempacota em duas colunas
+        res_last = merged_df.apply(calculate_last_treatment, axis=1)
+        merged_df[["Última Tratativa (dias)", "Última Tratativa (horas)"]] = pd.DataFrame(
+            res_last.tolist(), index=merged_df.index
+        )
+        # Aplica e desempacota em duas colunas
+        res_total = merged_df.apply(calculate_total_duration, axis=1)
+        merged_df[["Prazo Total do Chamado (dias)", "Prazo Total do Chamado (horas)"]] = pd.DataFrame(
+            res_total.tolist(), index=merged_df.index
+        )
+
         merged_df["Chamados atendidos dentro do SLA"] = merged_df.apply(sla_compliance, axis=1)
         merged_df["Chamados sem interação há 72h"] = merged_df.apply(determine_status, axis=1)
 
@@ -289,6 +425,51 @@ def confirm_upload(n_clicks, content1, content2):
         for col in numeric_columns:
             merged_df[col] = pd.to_numeric(merged_df[col], errors='coerce')
 
+
+        # REORGANIZAÇÃO DE COLUNAS
+        ordem_preferida = [
+            "Cliente/Síndico/Admin",
+            "Empreendimento",
+            "Torre",
+            "Unidade",
+            "Nº Contrato",
+            "Tipo Contrato",           
+            "Nº Ticket",
+            "ORIGEM",
+            "CLIENTE/SÍNDICO",
+            "USUÁRIO",
+            "STATUS",
+            "PRIORIDADE",
+            "CPF",
+            "TITULO1",
+            "TITULO2",
+            "TITULO3",
+            "TIPO STATUS TICKET",
+            "TIPO TICKET",
+            "TIPO AÇÃO",
+            "TIPO ORIGEM",
+            "ETAPA ATUAL",
+            "MOTIVO",
+            "Data Abertura",
+            "DT. PREVISÃO TÉRMINO ETAPA",
+            "DT. HISTORICO",
+            "DT. PREVISÃO TÉRMINO TICKET",
+            "DT. INICIO ETAPA",
+            "DT. FINALIZAÇÃO",
+            "DT. CANCELAMENTO",
+            "Primeira Tratativa (dias)",           
+            "Última Tratativa (dias)",            
+            "Prazo Total do Chamado (dias)",           
+            "Chamados atendidos dentro do SLA",
+            "Chamados sem interação há 72h",
+            "Primeira Tratativa (horas)",
+            "Última Tratativa (horas)",
+            "Prazo Total do Chamado (horas)"
+        ]
+        outras = [col for col in merged_df.columns if col not in ordem_preferida]
+        merged_df = merged_df[ordem_preferida + outras]
+
+        # Dropdown de empreendimentos
         if "Empreendimento" in merged_df.columns:
             empreendimentos_unicos = merged_df["Empreendimento"].dropna().unique()
             empreendimentos_unicos = sorted(empreendimentos_unicos)
@@ -298,6 +479,7 @@ def confirm_upload(n_clicks, content1, content2):
         else:
             dropdown_options = []
 
+        # Serializa para JSON
         merged_json = merged_df.to_json(orient="split")
 
         return (
@@ -322,7 +504,6 @@ def confirm_upload(n_clicks, content1, content2):
             }),
             None
         )
-
 
 # --------------------------------
 # Callback: Gerar relatório (inclui filtro e contagens)
@@ -350,40 +531,42 @@ def confirm_upload(n_clicks, content1, content2):
     Output("aggregated-table", "data"),
     Output("aggregated-table", "columns"),
     Output("report-date", "data"),
-    Output("filtered-data", "data"),  # <- Store para DF filtrado
+    Output("filtered-data", "data"),  
     Input("generate-report", "n_clicks"),
     State("merged-data", "data"),
     State("empreendimento-dropdown", "value"),  
     prevent_initial_call=True
 )
 def generate_report(n_clicks, merged_data_json, selected_empreendimento):
-    try:
-        if not merged_data_json:
-            # Retornar 23 valores (um para cada Output) se não houver dados
-            return (
-                html.Div("Por favor, confirme os uploads antes de gerar o relatório.", style={"color": "red"}),
-                {"display": "none"},
-                [],
-                [],
-                {"display": "none"},
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                {"display": "none"}, [],
-                {"display": "none"}, [], [],
-                None,
-                None
-            )
 
+    if not n_clicks:
+        raise PreventUpdate
+
+    if not merged_data_json:
+        return (
+            html.Div(
+                "Por favor, confirme os uploads antes de gerar o relatório.",
+                style={"color": "red"}
+            ),
+            {"display": "none"}, [], [], {"display": "none"}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, {"display": "none"}, [], {"display": "none"},     
+            [],
+            [],
+            None,
+            None
+        )
+    
+    try:
         # Converte JSON para DataFrame
         merged_df = pd.read_json(io.StringIO(merged_data_json), orient='split')
 
-        # Tratar a opção "Todos" e ausência de valor
+        # Tratar a opção "Todos"
         if not selected_empreendimento or "Todos" in selected_empreendimento:
-            # Não filtramos nada
             df_filtrado = merged_df
         else:
             # Filtrar pelos empreendimentos selecionados
             df_filtrado = merged_df[merged_df["Empreendimento"].isin(selected_empreendimento)]
 
+        # Nenhum dado após o filtro
         if df_filtrado.empty:
             return (
                 html.Div("Nenhum chamado encontrado para a seleção.", style={"color": "red"}),
@@ -398,7 +581,7 @@ def generate_report(n_clicks, merged_data_json, selected_empreendimento):
                 None
             )
 
-        # Cálculos de status
+        # Cálculos de status e SLA
         status_counts = df_filtrado['Chamados sem interação há 72h'].value_counts()
         sla_counts = df_filtrado['Chamados atendidos dentro do SLA'].value_counts()
 
@@ -513,7 +696,6 @@ def generate_report(n_clicks, merged_data_json, selected_empreendimento):
             None,
             None
         )
-
 
 # --------------------------------
 # Callback: Exportar relatório Excel

@@ -1,3 +1,0 @@
-app.py: Configuração e execução do aplicativo.
-layout.py: Layout com os botões de upload e o botão "Gerar Relatório".
-callbacks.py: Lógica para carregar os arquivos de upload, unir os dados e gerar o download do relatório final.

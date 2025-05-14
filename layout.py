@@ -5,50 +5,51 @@ import dash_bootstrap_components as dbc
 def create_layout(app):
     return dbc.Container(
         fluid=True,
-        style={"backgroundColor": "#FFFFFF"},
+        id="layout-container",      
         children=[
             # Cabeçalho com título e logo
             dbc.Container(
                 fluid=True,
+                className="header-container",
                 style={
-                    "backgroundImage": "linear-gradient(to right, #345F6C, #D2D2D2)",
-                    "paddingTop": "40px",
-                    "paddingBottom": "30px",
-                    "borderRadius": "10px",
-                    "boxShadow": "0 4px 6px rgba(0, 0, 0, 0.1)",
-                },
-                children=[
-                    dbc.Row(
-                        align="center",
-                        justify="between",
-                        children=[
-                            dbc.Col(
-                                html.H1(
-                                    "CRM Junix",
-                                    className="display-4",
-                                    style={
-                                        "color": "#FFFFFF",
-                                        "textAlign": "center",
-                                        "fontWeight": "bold",
-                                        "fontSize": "3.0rem",
-                                    },
-                                ),
-                                width="auto",
-                                style={"textAlign": "center"},
+                    "position": "relative",
+                    "background": "linear-gradient(135deg, #283E51 0%, #4B79A1 100%)",
+                    "padding": "50px 15px",
+                    "borderBottom": "3px solid #FFA80B",
+                    "boxShadow": "0 4px 8px rgba(0, 0, 0, 0.1)",
+                    "borderBottomLeftRadius": "12px",
+                    "borderBottomRightRadius": "12px"
+            },
+            children=[
+                dbc.Row(
+                    align="center",
+                    justify="between",
+                    children=[
+                        # Título à esquerda
+                        dbc.Col(
+                            html.H1(
+                                "CRM Junix",
+                                className="h2 text-white mb-0",
+                                style={
+                                    "fontWeight": "700",
+                                    "fontSize": "45px",
+                                    "margin": "0"
+                                }
                             ),
-                            dbc.Col(
-                                html.Img(
-                                    src=app.get_asset_url('logoOR2.png'),
-                                    height="60px",
-                                    style={"marginLeft": "auto", "marginRight": "auto", "marginTop":"-15px"},
-                                ),
-                                width="auto",
-                                style={"textAlign": "right"},
+                            width="auto"
+                        ),
+                        # Logo à direita
+                        dbc.Col(
+                            html.Img(
+                                src=app.get_asset_url("logoOR.png"),
+                                height="70px"
                             ),
-                        ],
-                    ),
-                ],
-            ),
+                            width="auto"
+                        )
+                    ]
+                )
+            ]
+        ),
 
             # Container para o primeiro card (Upload de Planilhas)
             dbc.Container(
@@ -99,7 +100,7 @@ def create_layout(app):
                                                                     "display": "block",
                                                                     "marginTop": "10px",
                                                                     "color": "#345F6C",
-                                                                    "fontSize": "0.85rem"  # (a) Fonte menor
+                                                                    "fontSize": "0.85rem"  
                                                                 }
                                                             ),
                                                             dcc.Upload(
@@ -109,8 +110,8 @@ def create_layout(app):
                                                                     color="primary",
                                                                     size="sm",
                                                                     style={
-                                                                        "width": "80%",           # Largura menor
-                                                                        "marginLeft": "auto",     # Centraliza horizontalmente
+                                                                        "width": "80%",           
+                                                                        "marginLeft": "auto",     
                                                                         "marginRight": "auto",
                                                                         "height": "40px",
                                                                         "display": "block",
@@ -140,7 +141,7 @@ def create_layout(app):
                                                                     "display": "block",
                                                                     "marginTop": "10px",
                                                                     "color": "#345F6C",
-                                                                    "fontSize": "0.85rem"  # (a) Fonte menor
+                                                                    "fontSize": "0.85rem"  
                                                                 }
                                                             ),
                                                             dcc.Upload(
@@ -150,8 +151,8 @@ def create_layout(app):
                                                                     color="primary",
                                                                     size="sm",
                                                                     style={
-                                                                        "width": "80%",           # Largura menor
-                                                                        "marginLeft": "auto",     # Centraliza horizontalmente
+                                                                        "width": "80%",           
+                                                                        "marginLeft": "auto",     
                                                                         "marginRight": "auto",
                                                                         "height": "40px",
                                                                         "display": "block",
@@ -173,7 +174,7 @@ def create_layout(app):
                                                     # Coluna do Botão Confirmar Uploads
                                                     dbc.Col(
                                                         xs=12, sm=6, md=2,
-                                                        style={"textAlign": "center"},  # Centraliza tudo nessa coluna
+                                                        style={"textAlign": "center"},  
                                                         children=[
                                                             dbc.Button(
                                                                 "Confirmar Uploads",
@@ -194,21 +195,20 @@ def create_layout(app):
 
                                                             # 2) O Loading (com o texto de status) vem abaixo do botão
                                                             dcc.Loading(
+                                                                id="loading-confirm-upload",
                                                                 type="circle",
-                                                                style={"marginTop": "15px"},  # Pequeno espaçamento abaixo do botão
+                                                                style={"marginTop": "15px", "display": "block"},  
                                                                 children=html.Div(
                                                                     id="confirm-upload-status",
                                                                     style={
                                                                         "textAlign": "center",
                                                                         "color": "#345F6C",
-                                                                        "marginTop": "15px"
+                                                                        "marginTop": "20px"
                                                                     }
                                                                 )
                                                             ),
                                                         ],
                                                     ),
-
-
 
                                                     # Coluna do Dropdown
                                                     dbc.Col(
@@ -217,9 +217,8 @@ def create_layout(app):
                                                         children=[
                                                             dbc.Label(
                                                                 "Empreendimento",
+                                                                className="text-center",
                                                                 style={
-                                                                    "textAlign": "center",
-                                                                    "display": "block",
                                                                     "marginTop": "10px",
                                                                     "color": "#345F6C",
                                                                     "fontSize": "0.85rem"
@@ -228,16 +227,16 @@ def create_layout(app):
                                                             dcc.Dropdown(
                                                                 id="empreendimento-dropdown",
                                                                 options=[],
-                                                                value=None,
-                                                                placeholder="Selecione 1 ou mais empreendimentos",
+                                                                value=[],
+                                                                placeholder="🔍 Selecione empreendimentos",
                                                                 multi=True,
+                                                                clearable=True,
+                                                                className="p-2 rounded-pill modern-dropdown",
                                                                 style={
-                                                                    "width": "100%",            
-                                                                    "marginLeft": "auto",      
-                                                                    "marginRight": "auto",
+                                                                    "width":    "100%",
                                                                     "fontSize": "0.85rem",
-                                                                    "marginTop": "5px"
-                                                                },
+                                                                    "marginTop": "-2px"
+                                                                }
                                                             ),
                                                         ],
                                                     ),
@@ -677,17 +676,17 @@ def create_layout(app):
                     "width": "100%",
                     "margin": "0 auto",
                     "backgroundColor": "#F8F8F8",
-                    "marginTop": "30px",  # Margem superior para separar dos containers acima
-                    "padding": "0"        # Sem padding extra
+                    "marginTop": "30px",  
+                    "padding": "0"        
                 },
                 children=[
                     dbc.Card(
                         style={
                             "width": "100%",
                             "backgroundColor": "#F8F8F8",
-                            "border": "none",     # Sem borda
-                            "boxShadow": "none",  # Sem sombra
-                            "borderRadius": "0",  # Sem cantos arredondados
+                            "border": "none",     
+                            "boxShadow": "none",  
+                            "borderRadius": "0",  
                             "padding": "0"
                         },
                         children=dbc.CardBody(
@@ -706,11 +705,10 @@ def create_layout(app):
                                     style={
                                         "textAlign": "center",
                                         "color": "#345F6C",
-                                        "margin": "20px 0"  # Espaço somente no título
+                                        "margin": "20px 0"  
                                     }
                                 ),
                                 html.Hr(style={"borderColor": "#FFA80B", "borderWidth": "1px", "borderStyle": "solid", "width": "85%", "margin": "0 auto 20px auto"}),  # Linha laranja
-                                #html.Hr(style={"margin": "0 20px"}),  # Linha horizontal com margem lateral
                                 dash_table.DataTable(
                                     id='top5-table',
                                     columns=[
@@ -759,7 +757,7 @@ def create_layout(app):
                     "width": "100%",
                     "margin": "0 auto",
                     "backgroundColor": "#F8F8F8",
-                    "marginTop": "30px",  # Margem superior para separar dos containers acima
+                    "marginTop": "30px", 
                     "padding": "0"
                 },
                 children=[
@@ -792,7 +790,6 @@ def create_layout(app):
                                     }
                                 ),
                                 html.Hr(style={"borderColor": "#FFA80B", "borderWidth": "1px", "borderStyle": "solid", "width": "85%", "margin": "0 auto 20px auto"}),  # Linha laranja
-                                #html.Hr(style={"margin": "0 20px"}),
                                 dash_table.DataTable(
                                     id='aggregated-table',
                                     columns=[],
@@ -833,13 +830,11 @@ def create_layout(app):
                 ],
             ),
 
-
-
         # Tabela e botão de exportação
         dbc.Container(
             fluid=True,
             style={
-                "backgroundColor": "#F8F8F8",  # Fundo claro para o container
+                "backgroundColor": "#F8F8F8",  
                 "width": "100%",
                 "margin": "0 auto",
                 "marginTop": "40px",  
@@ -886,37 +881,65 @@ def create_layout(app):
                                     "borderWidth": "1px",
                                     "borderStyle": "solid",
                                     "width": "80%",
-                                    "margin": "0 auto 20px auto"  # Centraliza e adiciona margem inferior
+                                    "margin": "0 auto 20px auto"  
                                 }
                             ),
-                            # Botão de Exportar para Excel
+                            
+                            # Botões: Exportar para Excel e Abrir Dashboard
                             dbc.Row(
                                 className="mb-3 justify-content-center",
                                 children=[
                                     dbc.Col(
-                                        width=12,
+                                        width="auto",
                                         children=dbc.Button(
                                             "Exportar para Excel",
                                             id="export-button",
                                             n_clicks=0,
-                                            className="mb-2",
                                             color="success",
                                             style={
-                                                "backgroundColor": "#FFA500",
+                                                "backgroundColor": "#28a745",       
                                                 "color": "#FFFFFF",
-                                                "borderColor": "transparent",
-                                                "width": "150px",
-                                                "display": "block",
-                                                "marginLeft": "auto",
-                                                "marginRight": "auto",
-                                                "outline": "none",
                                                 "border": "none",
-                                                "boxShadow": "none"
+                                                "borderRadius": "50px",            
+                                                "padding": "8px 20px",
+                                                "fontSize": "0.9rem",
+                                                "fontWeight": "bold",
+                                                "boxShadow": "0 4px 10px rgba(0,0,0,0.1)",
+                                                "transition": "0.3s",
+                                                "width": "170px",
+                                                "marginRight": "10px",
                                             },
-                                        ),
+                                            className="shadow-sm",
+                                        )
                                     ),
-                                ],
+                                    dbc.Col(
+                                        width="auto",
+                                        children=dcc.Link(
+                                            dbc.Button(
+                                                "Abrir Dashboard",
+                                                id="open-dashboard",
+                                                color="primary",
+                                                style={
+                                                    "backgroundColor": "#007bff",   
+                                                    "color": "#FFFFFF",
+                                                    "border": "none",
+                                                    "borderRadius": "50px",
+                                                    "padding": "8px 20px",
+                                                    "fontSize": "0.9rem",
+                                                    "fontWeight": "bold",
+                                                    "boxShadow": "0 4px 10px rgba(0,0,0,0.1)",
+                                                    "transition": "0.3s",
+                                                    "width": "170px",
+                                                },
+                                                className="shadow-sm",
+                                            ),
+                                            href="/dashboards",
+                                            refresh=False,
+                                        )
+                                    ),
+                                ]
                             ),
+
                             # Tabela
                             dash_table.DataTable(
                                 id="merged-table",
@@ -951,12 +974,31 @@ def create_layout(app):
                         ],
                     ),
                 ),
+
+                # Toast de confirmação
+                dbc.Toast(
+                    id="toast-confirmacao",
+                    header="Sucesso!",
+                    icon="success",
+                    dismissable=True,
+                    is_open=False,
+                    duration=4000,
+                    children="Uploads confirmados com sucesso.",
+                    style={
+                        "position": "fixed",
+                        "top": 70,
+                        "right": 30,
+                        "width": 350,
+                        "zIndex": 1050,
+                        "boxShadow": "0 4px 12px rgba(0, 0, 0, 0.15)"
+                    }
+                ),
+
                 # Armazenamento dos conteúdos e dados
                 dcc.Store(id="stored-upload-1"),
                 dcc.Store(id="stored-upload-2"),
                 dcc.Store(id="merged-data"),
                 dcc.Store(id="report-date"),
-                dcc.Store(id="filtered-data"),
                 dcc.Download(id="download-report"),
             ],
         )

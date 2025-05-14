@@ -1,17 +1,197 @@
-/* Remove a borda preta ou linhas indesejadas ao redor de containers e tabelas */
-#table-container, .dash-spreadsheet-container {
-    border: none !important; /* Remove qualquer borda */
-    box-shadow: none !important; /* Remove sombra padrão */
+/* =============================
+   GLOBAL
+============================= */
+
+body {
+  background-color: #1F2936 !important;
 }
 
-/* Remove borda do elemento table dentro do DataTable */
+.container-fluid,
+.dash-bootstrap {
+  background-color: transparent !important;
+}
+
+#layout-container,
+#table-container {
+  background-color: #FFFFFF !important;
+}
+
+/* =============================
+   LAYOUT E CARDS
+============================= */
+
+@media (max-width: 1366px) {
+  .card { padding: 10px !important; }
+}
+@media (max-width: 992px) {
+  .card { padding: 15px !important; }
+}
+
+.mini-card .card-body {
+  padding: 0.5rem !important;
+}
+
+.tooltip {
+  z-index: 10000 !important;
+}
+
+/* =============================
+   GRÁFICOS - COMPORTAMENTO E TAMANHO
+============================= */
+
+/* Gráficos padrão (exceto os específicos) */
+.graph-container {
+  max-width: 95% !important;
+  margin: 0 auto;
+  padding: 8px !important;
+  box-sizing: border-box;
+  height: 400px !important;
+  transition: transform 0.3s ease-in-out;
+  transform-origin: center center;
+}
+.graph-container .js-plotly-plot {
+  width: 100% !important;
+  height: calc(400px - 16px) !important;
+}
+
+@media (max-width: 1200px) {
+  .graph-container {
+    height: 320px !important;
+  }
+  .graph-container .js-plotly-plot {
+    height: calc(320px - 16px) !important;
+  }
+}
+
+@media (max-width: 1200px) {
+  .graph-container:hover { transform: scale(1.10) !important; }
+}
+@media (min-width: 1201px) {
+  .graph-container:hover { transform: scale(1.15) !important; }
+}
+
+/* Gráfico 10 */
+.graph10-responsive {
+  width: 100% !important;
+  max-width: 1200px !important;
+  margin: 0 auto !important;
+}
+.graph10-responsive .js-plotly-plot {
+  height: 100% !important;
+}
+@media (max-width: 1200px) {
+  .graph10-responsive {
+    max-width: 95% !important;
+  }
+}
+@media (max-width: 768px) {
+  .graph10-responsive {
+    max-width: 100% !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+}
+
+/* Gráfico 11 */
+.graph11-responsive {
+  width: 98% !important;
+  max-width: 1400px !important;
+  margin: 0 auto !important;
+}
+#dashboard-graph-11 {
+  height: 100% !important;
+}
+#dashboard-graph-11 .js-plotly-plot {
+  height: 100% !important;
+}
+
+/* Gráfico 4 */
+.graph-4-container {
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+}
+.graph-4-container .js-plotly-plot {
+  height: auto !important;
+}
+
+/* Gráfico 10 – Mini-cards com altura automática em notebooks */
+@media (max-width: 1200px) {
+  #graph10-card .mini-equal {
+    height: auto !important;
+  }
+}
+
+/* =============================
+   DROPDOWNS & MULTISELECT
+============================= */
+
+@media (max-width: 575.98px) {
+  .dash-bootstrap .dropdown-menu {
+    max-width: 100vw !important;
+  }
+}
+
+.Select-menu-outer,
+.Select-menu-outer .Select-option {
+  color: #333 !important;
+}
+.Select-placeholder,
+.Select-value-label {
+  color: inherit !important;
+}
+
+.Select--multi .Select-control {
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  max-height: 36px !important;
+}
+.Select--multi .Select-value {
+  font-size: 10px !important;
+  line-height: 12px !important;
+  padding: 2px 4px !important;
+  white-space: nowrap !important;
+  max-width: 160px !important;
+  text-overflow: ellipsis !important;
+  overflow: hidden !important;
+}
+
+/* Dropdown personalizado: "Selecione Empreendimentos" */
+.modern-dropdown .css-2b097c-container,
+.modern-dropdown .css-1pahdxg-control,
+.modern-dropdown .css-1d8n9bt {
+  background-color: #F2F2F2 !important;
+  border: 1px solid #ced4da !important;
+  border-radius: 50px !important;
+  box-shadow: none !important;
+}
+
+/* =============================
+   DATATABLE & BOTÕES
+============================= */
+
+#table-container,
+.dash-spreadsheet-container {
+  border: none !important;
+  box-shadow: none !important;
+}
 .dash-table-container table {
-    border: none !important; /* Remove qualquer borda */
+  border: none !important;
+}
+#export-button {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
-/* Remove borda preta do botão */
-#export-button {
-    outline: none !important;
-    border: none !important;
-    box-shadow: none !important;
+/* =============================
+   SPINNER (LOADING)
+============================= */
+
+#loading-confirm-upload .dash-spinner {
+  width: 3rem !important;
+  height: 3rem !important;
+}
+#loading-confirm-upload .dash-spinner circle {
+  stroke: #FFA726 !important;
+  stroke-width: 0.4rem !important;
 }

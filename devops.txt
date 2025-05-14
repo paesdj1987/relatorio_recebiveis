@@ -1,0 +1,11 @@
+# DEVOPS.TXT
+
+## Estrutura Atualizada
+
+- Adicionados os arquivos `dashboard.py` e `dashboard_callbacks.py` para separar a lógica do dashboard principal.
+- O `layout.py` foi ajustado para carregar o layout modularizado do dashboard.
+- O `callbacks.py` agora se concentra apenas nos callbacks principais relacionados ao upload e geração de relatório.
+- `custom.css` atualizado para melhorar o estilo dos gráficos, dropdowns e loading.
+- `nbformat` adicionado ao `requirements.txt` por dependência de gráficos interativos.
+- Criado `dev-requirements.txt` com pacotes de desenvolvimento: `jupyterlab` e `ipykernel`.
+

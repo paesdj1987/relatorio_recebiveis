@@ -8,4 +8,7 @@ dash-table
 dash-ag-grid
 openpyxl
 business-duration
-xlsxwriter
+ipywidgets
+nbformat>=4.2.0
+
+
