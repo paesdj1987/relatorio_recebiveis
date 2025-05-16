@@ -319,7 +319,7 @@ def create_dashboard_layout():
     # Parte dos Gráficos
     #---------------------
 
-    # ---------- Card Gráfico 1 ----------
+    # ---------- Card Gráfico 1: Chamados por Usuário ----------
     graph1_card = dbc.Card(
         className="shadow-lg graph-container",
         style={
@@ -355,7 +355,7 @@ def create_dashboard_layout():
         ],
     )
 
-    # ---------- Card Gráfico 2 ----------
+    # ---------- Card Gráfico 2: Data Abertura ----------
     graph2_card = dbc.Card(
         className="shadow-lg graph-container",
         style={
@@ -513,7 +513,7 @@ def create_dashboard_layout():
         ],
     )
 
-    # ---------- Card Gráfico 6: Qtd por Status ----------
+    # ---------- Card Gráfico 6: Qtd por Status  ----------
     graph6_card = dbc.Card(
         className="shadow-lg graph-container",
         style={
@@ -521,26 +521,26 @@ def create_dashboard_layout():
             "backgroundColor": "rgba(255,255,255,0.08)",
             "border":          "1px solid rgba(255,255,255,0.15)",
             "borderRadius":    "12px",
+            "height":          "360px",           
         },
         children=[
             dcc.Loading(
                 dcc.Graph(
                     id="dashboard-graph-6",
-                    figure={},  
+                    figure={},
                     style={"width": "100%", "height": "100%"},
                     config={
-                        "displayModeBar": "hover",          
-                        "modeBarButtons": [["toImage"]],    
+                        "displayModeBar": "hover",
+                        "modeBarButtons": [["toImage"]],
                         "toImageButtonOptions": {
                             "format": "png",
                             "filename": "qtd_por_status_6",
-                            "height": 600,    
-                            "width": 800,     
-                            "scale": 1
+                            "height": 360,
+                            "width": 360,
+                            "scale": 2
                         },
                         "responsive": True
                     },
-                    className="graph",
                 ),
                 type="circle",
                 color="#FFA726"
@@ -548,6 +548,7 @@ def create_dashboard_layout():
             dbc.Tooltip("Qtd por Status", target="dashboard-graph-6"),
         ],
     )
+
 
     # ---------- Card Gráfico 7: Qtd por Status ----------
     graph7_card = dbc.Card(
@@ -879,28 +880,30 @@ def create_dashboard_layout():
     # monta as duas colunas
     left_col = dbc.Col(
         [
+            html.Div(style={"marginTop": "20px"}),
             graph1_card,
-            html.Div(style={"marginTop": "20px"}),
+            html.Div(style={"marginTop": "32px"}),
             graph3_card,
-            html.Div(style={"marginTop": "20px"}),
+            html.Div(style={"marginTop": "32px"}),
             graph5_card,
-            html.Div(style={"marginTop": "20px"}),
+            html.Div(style={"marginTop": "32px"}),
             graph7_card,
-            html.Div(style={"marginTop": "20px"}),
+            html.Div(style={"marginTop": "32px"}),
             graph9_card,
         ],
         xs=12, md=6,
     )
     right_col = dbc.Col(
         [
+            html.Div(style={"marginTop": "20px"}),
             graph2_card,
-            html.Div(style={"marginTop": "20px"}),
+            html.Div(style={"marginTop": "32px"}),
             graph4_card,
-            html.Div(style={"marginTop": "20px"}),
+            html.Div(style={"marginTop": "32px"}),
             graph6_card,
-            html.Div(style={"marginTop": "20px"}),
+            html.Div(style={"marginTop": "32px"}),
             graph8_card,
-            html.Div(style={"marginTop": "20px"}),
+            html.Div(style={"marginTop": "32px"}),
             graph10_card,
         ],
         xs=12, md=6,
@@ -925,7 +928,7 @@ def create_dashboard_layout():
         children=[
             filter_card,
             graph_row,
-            html.Div(style={"marginTop": "20px"}),  
+            html.Div(style={"marginTop": "35px"}),  
             graph11_row,                            
         ],
     )

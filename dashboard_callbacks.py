@@ -18,9 +18,9 @@ REGION_MAPPING = {
     "QUINTAS DE SAUIPE GRANDE LAGUNA": "Bahia",
     "EVOKE - FASE 2": "Pernambuco",
     "EVOKE - FASE 1": "Pernambuco",
-    "RESERVA SAUIPE - FASE 2": "Pernambuco",
+    "RESERVA SAUIPE - FASE 2": "Bahia",
     "HANGAR EMPRESARIAL - FASE 2": "Bahia",
-    "VERANO": "Bahia",
+    "VERANO": "Pernambuco",
     "Baume": "Sudeste",
     "VITRIUM - FASE 1": "Sudeste",
     "CONSORCIO PORTO ATLANTICO LESTE - FASE 2": "Sudeste",
@@ -792,47 +792,52 @@ def register_dashboard_callbacks(app):
         if users:
             df = df[df[col_user].isin(users)]
 
-        # após calcular o cont:
+        # 1) Contagem por status
         cont = df["STATUS"].value_counts().reset_index()
         cont.columns = ["Status", "Quantidade"]
+        total = int(cont["Quantidade"].sum())
 
-        # adiciona coluna escalonada:
-        cont["Peso"] = np.sqrt(cont["Quantidade"])
-
+        # 2) Pie com furo, com pull e borda branca
         fig6 = px.pie(
             cont,
             names="Status",
-            values="Peso",                     
+            values="Quantidade",
+            hole=0.5,
+            color_discrete_sequence=["#FFA726","#1F77B4","#2CA02C","#D62728"],
             title="Qtd por Status",
-            hole=0.4,
-            color_discrete_sequence=["#FFA726","#DDDDDD","#8B4513","#A9A9A9"],
             template=None,
-            hover_data=["Quantidade"],         
+            hover_data=["Quantidade"],
         )
-
-        # mostra o valor real (não o sqrt) dentro da fatia
         fig6.update_traces(
-            textinfo="none",                   
-            hovertemplate="%{label}: %{customdata[0]}<extra></extra>",
+            textinfo="none", 
+            pull=[0.05]*len(cont),
+            marker=dict(line=dict(color="#FFFFFF", width=2)),
+            hovertemplate="<b>%{label}</b><br>%{customdata[0]} chamados<extra></extra>"
         )
 
-        # e desenha o rótulo com o valor real em anotações
-        for i, row in cont.iterrows():
-            fig6.add_annotation(
-                text=str(row["Quantidade"]),
-                x=0.5 + 0.35 * np.cos(np.deg2rad((i+0.5) / len(cont) * 360)),
-                y=0.5 + 0.35 * np.sin(np.deg2rad((i+0.5) / len(cont) * 360)),
-                showarrow=False,
-                font=dict(color="#FFFFFF", size=12),
-            )
+        # 3) Anotação central com total
+        fig6.add_annotation(
+            text=f"<b>Total<br>{total}</b>",
+            showarrow=False,
+            font=dict(size=14, color="#FFFFFF"),
+            x=0.5, y=0.5,
+            xref="paper", yref="paper"
+        )
 
+        # 4) Layout moderno: fundo transparente, legenda embaixo
         fig6.update_layout(
             title_x=0.5,
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
             font=dict(color="#FFFFFF"),
-            legend=dict(font=dict(size=12, color="#FFFFFF")),
-            margin=dict(l=20, r=100, t=50, b=20),
+            legend=dict(
+                orientation="h",
+                y=-0.15,
+                x=0.5,
+                xanchor="center",
+                font=dict(size=12, color="#FFFFFF")
+            ),
+            margin=dict(l=20, r=20, t=50, b=80)
         )
 
         return fig6

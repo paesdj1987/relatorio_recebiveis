@@ -10,46 +10,73 @@ def create_layout(app):
             # Cabeçalho com título e logo
             dbc.Container(
                 fluid=True,
-                className="header-container",
+                id="app-header",
                 style={
-                    "position": "relative",
-                    "background": "linear-gradient(135deg, #283E51 0%, #4B79A1 100%)",
-                    "padding": "50px 15px",
-                    "borderBottom": "3px solid #FFA80B",
-                    "boxShadow": "0 4px 8px rgba(0, 0, 0, 0.1)",
-                    "borderBottomLeftRadius": "12px",
-                    "borderBottomRightRadius": "12px"
-            },
-            children=[
-                dbc.Row(
+                    "position": "relative",   
+                    "width": "100%",
+                    "padding": "25px 30px",
+                    "background": "linear-gradient(90deg, #23395d 0%, #406e8e 50%, #4b9cd3 100%)",
+                    "borderBottom": "4px solid #FFA80B",
+                    "boxShadow": "0 3px 8px rgba(0,0,0,0.25)",
+                    "borderBottomLeftRadius": "18px",
+                    "borderBottomRightRadius": "18px",
+                },
+                children=dbc.Row(
                     align="center",
                     justify="between",
                     children=[
-                        # Título à esquerda
+                        # ── Logo (esquerda) ──
                         dbc.Col(
-                            html.H1(
-                                "CRM Junix",
-                                className="h2 text-white mb-0",
+                            html.Img(
+                                src=app.get_asset_url("logoOR.png"),
                                 style={
-                                    "fontWeight": "700",
-                                    "fontSize": "45px",
-                                    "margin": "0"
+                                    "height": "70px",
+                                    "width": "auto",
+                                    "filter": "drop-shadow(0 1px 3px rgba(0,0,0,0.4))"
                                 }
                             ),
                             width="auto"
                         ),
-                        # Logo à direita
+
+                        # ── Título + subtítulo (centro) ──
                         dbc.Col(
-                            html.Img(
-                                src=app.get_asset_url("logoOR.png"),
-                                height="70px"
+                            html.Div(
+                                [
+                                    html.H1(
+                                        "CRM Junix",
+                                        style={
+                                            "color": "#FFFFFF",
+                                            "fontWeight": "700",
+                                            "fontSize": "42px",
+                                            "margin": "0",
+                                            "textShadow": "0 2px 4px rgba(0,0,0,0.3)"
+                                        }
+                                    ),
+                                    html.H5(
+                                        "Relatório de Tickets",
+                                        style={
+                                            "color": "#FFE8B0",
+                                            "fontWeight": "400",
+                                            "margin": "5px 0 0 0",
+                                            "fontSize": "18px",
+                                            "letterSpacing": "0.5px"
+                                        }
+                                    ),
+                                ],
+                                style={
+                                    "position": "absolute",
+                                    "top": "50%",
+                                    "left": "50%",
+                                    "transform": "translate(-50%, -50%)",
+                                    "textAlign": "center",
+                                    "pointerEvents": "none"  
+                                }
                             ),
-                            width="auto"
-                        )
+                            width=True  
+                        ),
                     ]
                 )
-            ]
-        ),
+            ),
 
             # Container para o primeiro card (Upload de Planilhas)
             dbc.Container(

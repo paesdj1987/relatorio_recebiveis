@@ -13,6 +13,7 @@ import datetime
 import time
 import math
 
+
 warnings.simplefilter("ignore", UserWarning)
 
 date_columns = ["DT. INICIO ETAPA", "Data Abertura", "DT. FINALIZAÇÃO"]
@@ -138,10 +139,6 @@ def confirm_upload(n_clicks, content1, content2):
         df2 = df2.rename(columns={'Nº': 'ticket_raw'})
 
         def normalizar_ticket(col):
-            """
-            Converte qualquer coisa em string, remove espaços, tira .0, 
-            mantém só dígitos e devolve como Int64 (suporta nulos).
-            """
             return (
                 col.astype(str)
                    .str.strip()
@@ -162,11 +159,21 @@ def confirm_upload(n_clicks, content1, content2):
             suffixes=('_df1', '_df2')
         )
 
-        # Remove colunas auxiliares usadas no merge
-        merged_df.drop(columns=['ticket_raw_df1', 'ticket_raw_df2'], inplace=True, errors='ignore')
+        # Renomeia o 'ticket_raw_df2' (coluna original 'Nº' do df2) para 'Nº'
+        merged_df.rename(columns={'ticket_raw_df2': 'Nº'}, inplace=True)
 
-        # Renomeia a chave final se quiser manter a nomenclatura original
+        # --- FILTRO NOVO: descarta linhas sem 'Nº' -------------------
+        merged_df = merged_df[
+            merged_df["Nº"].notna() &
+            (merged_df["Nº"].astype(str).str.strip() != "")
+        ]
+
+        # Remove apenas o 'ticket_raw_df1' (vindo de df1)
+        merged_df.drop(columns=['ticket_raw_df1'], inplace=True, errors='ignore')
+
+        # Renomeia a chave final para 'Nº Ticket'
         merged_df.rename(columns={'ticket_key': 'Nº Ticket'}, inplace=True)
+
 
         # Verifica se "Data Abertura" está em timestamp numérico (milissegundos) e converte se necessário
         if 'Data Abertura' in merged_df.columns:
@@ -200,43 +207,44 @@ def confirm_upload(n_clicks, content1, content2):
             if start > end:
                 start, end = end, start
 
-            # 3) Mesma data → 0 dias e horas completas
-            delta = end - start
-            if start.date() == end.date():
-                duration_days = 0
-                duration_hours = int(delta.total_seconds() // 3600)
-                return duration_days, duration_hours
+            # 3) Calendário e truncagem de data
+            bus_cal   = get_busdaycalendar_with_holidays(start, end)
+            start_day = np.datetime64(start.date())
+            end_day   = np.datetime64(end.date())
+            delta     = end - start
 
-            # 4) Calendário de dias úteis
-            bus_cal    = get_busdaycalendar_with_holidays(start, end)
-            start_date = np.datetime64(start.date())
-            end_date   = np.datetime64(end.date())
+            # 4) Mesma data: horas úteis se for dia útil
+            if start_day == end_day:
+                if np.is_busday(start_day, busdaycal=bus_cal):
+                    business_secs = delta.total_seconds()
+                else:
+                    business_secs = 0
+                h = int(business_secs // 3600)
+                return 0, h
 
-            # 5) Dias úteis completos (exclui extremos, trunca negativo)
+            # 5) Dias úteis completos
             full_days = np.busday_count(
-                start_date + np.timedelta64(1, "D"),
-                end_date,
+                start_day + np.timedelta64(1, "D"),
+                end_day,
                 busdaycal=bus_cal
             )
-            if full_days < 0:
-                full_days = 0
+            full_days = max(full_days, 0)
 
-            # 6) Segundos totais = dias completos + frações do primeiro/último dia
-            total_secs = full_days * SECONDS_IN_DAY
-            if np.is_busday(start_date, busdaycal=bus_cal):
-                fim = datetime.datetime.combine(start.date(), datetime.time.max)
-                total_secs += (fim - start).total_seconds()
-            if np.is_busday(end_date, busdaycal=bus_cal):
-                inicio = datetime.datetime.combine(end.date(), datetime.time.min)
-                total_secs += (end - inicio).total_seconds()
+            # 6) Frações do primeiro e último dia
+            business_secs = full_days * SECONDS_IN_DAY
+            if np.is_busday(start_day, busdaycal=bus_cal):
+                end_of_start = datetime.datetime.combine(start.date(), datetime.time.max)
+                business_secs += (end_of_start - start).total_seconds()
+            if np.is_busday(end_day, busdaycal=bus_cal):
+                start_of_end = datetime.datetime.combine(end.date(), datetime.time.min)
+                business_secs += (end - start_of_end).total_seconds()
 
-            # 7) Converte para dias (ceil: resto vira 1 dia)
-            duration_days = math.ceil(total_secs / SECONDS_IN_DAY)
+            # 7) Dias úteis arredondados
+            duration_days = math.ceil(business_secs / SECONDS_IN_DAY)
 
-            # 8) Horas completas brutas
-            duration_hours = int(delta.total_seconds() // 3600)
-
-            return duration_days, duration_hours
+            # 8) Horas inteiras
+            h = int(business_secs // 3600)
+            return duration_days, h
 
 
         def calculate_last_treatment(row):
@@ -251,42 +259,44 @@ def confirm_upload(n_clicks, content1, content2):
             if start > end:
                 start, end = end, start
 
-            # 3) Mesma data → 0 dias e horas completas
-            delta = end - start
-            if start.date() == end.date():
-                duration_days = 0
-                duration_hours = int(delta.total_seconds() // 3600)
-                return duration_days, duration_hours
+            # 3) Calendário e truncagem de data
+            bus_cal   = get_busdaycalendar_with_holidays(start, end)
+            start_day = np.datetime64(start.date())
+            end_day   = np.datetime64(end.date())
+            delta     = end - start
 
-            # 4) Calendário de dias úteis
-            bus_cal    = get_busdaycalendar_with_holidays(start, end)
-            start_date = np.datetime64(start.date())
-            end_date   = np.datetime64(end.date())
+            # 4) Mesma data: horas úteis se for dia útil
+            if start_day == end_day:
+                if np.is_busday(start_day, busdaycal=bus_cal):
+                    business_secs = delta.total_seconds()
+                else:
+                    business_secs = 0
+                h = int(business_secs // 3600)
+                return 0, h
 
-            # 5) Dias úteis completos (exclui extremos, trunca negativo)
+            # 5) Dias úteis completos
             full_days = np.busday_count(
-                start_date + np.timedelta64(1, "D"),
-                end_date,
+                start_day + np.timedelta64(1, "D"),
+                end_day,
                 busdaycal=bus_cal
             )
-            if full_days < 0:
-                full_days = 0
+            full_days = max(full_days, 0)
 
-            # 6) Segundos totais = dias completos + frações do primeiro/último dia
-            total_secs = full_days * SECONDS_IN_DAY
-            if np.is_busday(start_date, busdaycal=bus_cal):
-                fim = datetime.datetime.combine(start.date(), datetime.time.max)
-                total_secs += (fim - start).total_seconds()
-            if np.is_busday(end_date, busdaycal=bus_cal):
-                inicio = datetime.datetime.combine(end.date(), datetime.time.min)
-                total_secs += (end - inicio).total_seconds()
+            # 6) Frações do primeiro e último dia
+            business_secs = full_days * SECONDS_IN_DAY
+            if np.is_busday(start_day, busdaycal=bus_cal):
+                end_of_start = datetime.datetime.combine(start.date(), datetime.time.max)
+                business_secs += (end_of_start - start).total_seconds()
+            if np.is_busday(end_day, busdaycal=bus_cal):
+                start_of_end = datetime.datetime.combine(end.date(), datetime.time.min)
+                business_secs += (end - start_of_end).total_seconds()
 
-            # 7) Converte para dias (resto vira 1 dia)
-            duration_days = math.ceil(total_secs / SECONDS_IN_DAY)
-            # 8) Horas completas brutas
-            duration_hours = int(delta.total_seconds() // 3600)
+            # 7) Dias úteis arredondados
+            duration_days = math.ceil(business_secs / SECONDS_IN_DAY)
 
-            return duration_days, duration_hours
+            # 8) Horas inteiras
+            h = int(business_secs // 3600)
+            return duration_days, h
 
 
         def calculate_total_duration(row):
@@ -301,43 +311,46 @@ def confirm_upload(n_clicks, content1, content2):
             if start > end:
                 start, end = end, start
 
-            # 3) Mesma data → 0 dias e horas completas
-            delta = end - start
-            if start.date() == end.date():
-                duration_days = 0
-                duration_hours = int(delta.total_seconds() // 3600)
-                return duration_days, duration_hours
+            # 3) Calendário e truncagem de data
+            bus_cal   = get_busdaycalendar_with_holidays(start, end)
+            start_day = np.datetime64(start.date())
+            end_day   = np.datetime64(end.date())
+            delta     = end - start
 
-            # 4) Calendário de dias úteis
-            bus_cal    = get_busdaycalendar_with_holidays(start, end)
-            start_date = np.datetime64(start.date())
-            end_date   = np.datetime64(end.date())
+            # 4) Mesma data: horas úteis se for dia útil
+            if start_day == end_day:
+                if np.is_busday(start_day, busdaycal=bus_cal):
+                    business_secs = delta.total_seconds()
+                else:
+                    business_secs = 0
+                h = int(business_secs // 3600)
+                return 0, h
 
-            # 5) Dias úteis completos (exclui extremos, trunca negativo)
+            # 5) Dias úteis completos
             full_days = np.busday_count(
-                start_date + np.timedelta64(1, "D"),
-                end_date,
+                start_day + np.timedelta64(1, "D"),
+                end_day,
                 busdaycal=bus_cal
             )
-            if full_days < 0:
-                full_days = 0
+            full_days = max(full_days, 0)
 
-            # 6) Segundos totais = dias completos + frações do primeiro/último dia
-            total_secs = full_days * SECONDS_IN_DAY
-            if np.is_busday(start_date, busdaycal=bus_cal):
-                fim = datetime.datetime.combine(start.date(), datetime.time.max)
-                total_secs += (fim - start).total_seconds()
-            if np.is_busday(end_date, busdaycal=bus_cal):
-                inicio = datetime.datetime.combine(end.date(), datetime.time.min)
-                total_secs += (end - inicio).total_seconds()
+            # 6) Frações do primeiro e último dia
+            business_secs = full_days * SECONDS_IN_DAY
+            if np.is_busday(start_day, busdaycal=bus_cal):
+                end_of_start = datetime.datetime.combine(start.date(), datetime.time.max)
+                business_secs += (end_of_start - start).total_seconds()
+            if np.is_busday(end_day, busdaycal=bus_cal):
+                start_of_end = datetime.datetime.combine(end.date(), datetime.time.min)
+                business_secs += (end - start_of_end).total_seconds()
 
-            # 7) Converte para dias (ceil: resto vira 1 dia)
-            duration_days = math.ceil(total_secs / SECONDS_IN_DAY)
-            # 8) Horas completas brutas
-            duration_hours = int(delta.total_seconds() // 3600)
+            # 7) Dias úteis arredondados
+            duration_days = math.ceil(business_secs / SECONDS_IN_DAY)
 
-            return duration_days, duration_hours
+            # 8) Horas inteiras
+            h = int(business_secs // 3600)
+            return duration_days, h
 
+       #--------------------------------------------------------
         def sla_compliance(row):
             origem = row.get("ORIGEM")
             if origem == "E-mail OR":
@@ -433,7 +446,8 @@ def confirm_upload(n_clicks, content1, content2):
             "Torre",
             "Unidade",
             "Nº Contrato",
-            "Tipo Contrato",           
+            "Tipo Contrato",
+            "Nº",             
             "Nº Ticket",
             "ORIGEM",
             "CLIENTE/SÍNDICO",
@@ -739,3 +753,4 @@ def export_to_excel(n_clicks, filtered_data_json, report_date):
     except Exception as e:
         print(f"Erro na exportação: {e}")
         return None
+    

@@ -2,6 +2,25 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas aqui.
 
+## [v1.1.2] - 2025-05-16
+
+### Alterado
+- `callbacks.py` alteração no filtro da coluna 'Nº'
+- `layout.py` alteração no cabeçalho da pagina inicial
+- `dashboard.py` ajuste no layout do gráfico 6
+- `dashboard_callbacks.py` adaptado para o ajuste no layout
+
+### Corrigido
+- Correção na coluna 'Nº'
+
+## [v1.1.1] - 2025-05-14
+
+### Alterado
+- `callbacks.py` atualizado com melhorias na lógica de upload e geração de relatório
+
+### Corrigido
+- Correção nas colunas de horas do relatório
+
 ## [v1.1.0] - 2025-05-14
 
 ### Adicionado
@@ -18,8 +37,9 @@ Todas as mudanças notáveis neste projeto serão documentadas aqui.
 
 ### Corrigido
 - Correção de conflito entre os botões "Limpar Filtros" e "Atualizar"
-- Ajuste no botão 'selecione empreendimentos' 
+- Ajuste no botão 'selecione empreendimentos'
 
----
+
+
 
 
