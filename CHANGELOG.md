@@ -2,7 +2,15 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas aqui.
 
-## [v1.1.2] - 2025-05-16
+## [v1.1.3] - 2025-05-16
+
+### Alterado
+- `dashboard_callbacks.py` ajuste na estrutura do gráfico 2
+
+### Corrigido
+- Correção no formato do gráfico
+
+## [v1.1.2] - 2025-05-15
 
 ### Alterado
 - `callbacks.py` alteração no filtro da coluna 'Nº'

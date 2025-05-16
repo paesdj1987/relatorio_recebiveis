@@ -415,44 +415,58 @@ def register_dashboard_callbacks(app):
         df["Data Abertura"] = pd.to_datetime(df["Data Abertura"], dayfirst=True, errors="coerce")
         df = df.dropna(subset=["Data Abertura"])
 
-        # 3) Cria histograma mensal
+        # 3) Histograma mensal
         fig2 = px.histogram(
             df,
             x="Data Abertura",
             nbins=max(df["Data Abertura"].dt.to_period("M").nunique(), 1),
-            title="Data Abertura",
-            labels={"Data Abertura": "Data Abertura", "count": "Quantidade"},
             color_discrete_sequence=["#FFA726"],
             template=None,
-            text_auto=True
         )
+
+        # 4) Layout moderno
         fig2.update_layout(
-            title_x=0.5,
+            title=dict(
+                text="Qtd por Data de Abertura<br>"
+                    "<span style='font-size:13px; font-weight:400;'>"
+                    "Arraste o controle abaixo para filtrar o período</span>",
+                x=0.5,
+                xanchor="center",
+                yanchor="top",
+                font=dict(size=20, color="#FFFFFF", family="Segoe UI")
+            ),
+            bargap=0.15,
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#FFFFFF"),
-            autosize=True,
-            bargap=0.2,                      
-            margin=dict(l=40, r=20, t=50, b=50),  
+            font=dict(color="#FFFFFF", size=12),
+            margin=dict(l=40, r=20, t=70, b=70),
             yaxis_title="Quantidade",
-            xaxis_title="",                                
-            xaxis=dict(rangeslider=dict(visible=True), type="date")
+            xaxis_title="",
+            xaxis=dict(
+                tickformat="%b %Y",
+                rangeslider=dict(
+                    visible=True,
+                    thickness=0.10,
+                    bgcolor="rgba(255,255,255,0.20)",
+                    bordercolor="rgba(255,255,255,0.3)",
+                    borderwidth=1
+                ),
+                type="date"
+            ),
+            hovermode="x unified"
         )
-        fig2.update_xaxes(
-            tickfont=dict(size=10, color="#FFFFFF"),
-            color="#FFFFFF",
-            gridcolor="rgba(255,255,255,0.1)"
-        )
-        fig2.update_yaxes(
-            tickfont=dict(color="#FFFFFF"),
-            gridcolor="rgba(255,255,255,0.1)"
-        )
+
+        # 5) Barras e tooltip
         fig2.update_traces(
-            textposition="outside",
-            texttemplate="%{y}",            
-            textfont=dict(color="#FFFFFF", size=10),
-            cliponaxis=False
+            hovertemplate="<b>%{x|%b %Y}</b><br>%{y} chamados<extra></extra>",
+            marker_line_width=0,
+            opacity=0.95
         )
+
+        # 6) Grades suaves
+        fig2.update_xaxes(gridcolor="rgba(255,255,255,0.08)")
+        fig2.update_yaxes(gridcolor="rgba(255,255,255,0.08)")
+
 
         return fig2
     
@@ -515,7 +529,7 @@ def register_dashboard_callbacks(app):
             y="Quantidade",
             title="Qtd por Mês",
             text="Quantidade",
-            color_discrete_sequence=["#FF8C25"],   
+            color_discrete_sequence=["#FFA726"],   
             template=None,
         )
         # linha de média
