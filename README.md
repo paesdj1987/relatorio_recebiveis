@@ -1,58 +1,94 @@
+# 📊 Relatório de Sistema de Recebíveis
 
-# 🧠 Dash Ticket
+Esta aplicação web foi desenvolvida em Python com Dash para consolidar, tratar e analisar relatórios exportados do sistema de recebíveis. O foco principal é medir o desempenho da equipe de Relacionamento com o Cliente com base nos SLAs definidos.
 
-Aplicação web interativa construída com [Dash](https://plotly.com/dash/) para upload, processamento e análise de dados de chamados, com filtros por empreendimento, status, datas e geração de gráficos e relatórios.
+## ✨ Funcionalidades
+
+- Upload de 2 planilhas geradas pelo sistema de recebíveis (módulo CRM)
+- Possibilidade de filtrar o relatório por Empreendimento
+- Consolidação e tratamento automático dos dados
+- Classificação dos chamados por tipo de SLA (48h e 72h)
+- Visualização de indicadores em cards coloridos
+- Dashboard interativo com filtros e gráficos responsivos
+- Exportação do relatório consolidado em Excel
+- Cálculo inteligente de prazos com feriados nacionais e finais de semana
 
 ---
 
-## 🚀 Como executar
+## 🖼️ Demonstrações Visuais
 
-### 1. Clone o repositório
-```bash
-git clone https://github.com/seu-usuario/seu-repositorio.git
-cd seu-repositorio
+### 📌 Página Inicial e Indicadores
+![img_1](assets/images/img_1.png)
 
-2. Crie um ambiente virtual
+### 📌 Após upload e geração do relatório
+![img_2](assets/images/img_2.png)
 
-python -m venv venv
-source venv/bin/activate      # Linux/macOS
-venv\Scripts\activate         # Windows
+### 📈 Dashboard Interativo - Parte 1
+![img_3](assets/images/img_3.png)
 
-3. Instale as dependências
+### 📈 Dashboard Interativo - Parte 2
+![img_4](assets/images/img_4.png)
 
-pip install -r requirements.txt
+---
 
-4. Execute a aplicação
+## ⚙️ Tecnologias Utilizadas
 
-python app.py
-Acesse http://127.0.0.1:8053 no navegador.
+A aplicação foi desenvolvida com:
 
-📁 Estrutura de diretórios
-.
-├── app.py                   # Arquivo principal
-├── layout.py                # Layout geral
-├── callbacks.py             # Callbacks principais (upload e relatório)
-├── dashboard.py             # Layout do dashboard
-├── dashboard_callbacks.py   # Callbacks dos gráficos
-├── feriados.py              # Utilitários de feriado (SLA)
+- **Python**
+- **Dash** – Framework para criação de dashboards interativos
+- **Dash Bootstrap Components** – Componentes com visual profissional
+- **Pandas** – Manipulação e limpeza de dados
+- **Plotly** – Criação de gráficos dinâmicos e responsivos
+- **XlsxWriter** – Exportação para Excel
+- **NumPy** – Suporte ao cálculo de datas úteis
+- **datetime** – Cálculos de SLA
+- **Feriados personalizados** – Baseados em finais de semana e feriados nacionais do Brasil
+
+---
+
+## 🗂️ Estrutura do Projeto
+
+```text
+📦 relatorio_sistema_recebiveis
+├── app.py
+├── callbacks.py
+├── dashboard.py
+├── dashboard_callbacks.py
+├── feriados.py
+├── layout.py
+├── requirements.txt
+├── custom.css
 ├── assets/
-│   └── custom.css           # Estilo visual da aplicação
-├── requirements.txt         # Dependências principais
-├── devops.txt               # Alterações recentes e notas técnicas
-├── CHANGELOG.md             # Histórico de versões e melhorias
-└── README.md                # Instruções de uso e descrição do projeto
+│   └── images/
+│       ├── img_1.png
+│       ├── img_2.png
+│       ├── img_3.png
+│       └── img_4.png
+```
+---
 
-✨ Funcionalidades
-Upload de arquivos Excel
-Confirmação de uploads
-Filtros por empreendimento, status, origem e data
-Indicadores e gráficos interativos
-Geração de relatório e exportação para Excel
-Interface responsiva com Bootstrap
+## 🏁 Como Executar Localmente
 
+1. Clone o repositório:
 
-🛠️ Tecnologias
-Dash
-Plotly
-Pandas
-Bootstrap (via dash-bootstrap-components)
+- git clone https://github.com/seu-usuario/relatorio_sistema_recebiveis.git
+- cd relatorio_sistema_recebiveis
+
+2. Crie um ambiente virtual (opcional, mas recomendado):
+
+- python -m venv venv
+- venv\Scripts\activate  # Windows
+- source venv/bin/activate  # Linux/macOS
+
+3. Instale as dependências:
+
+- pip install -r requirements.txt
+
+4. Execute o aplicativo:
+
+- python app.py
+
+## 👤 Autor
+Desenvolvido por João Paes
+🔗 github.com/paesdj1987
