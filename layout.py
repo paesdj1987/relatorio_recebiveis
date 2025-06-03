@@ -7,7 +7,7 @@ def create_layout(app):
         fluid=True,
         id="layout-container",      
         children=[
-            # Cabeçalho com título e logo
+            # Cabeçalho 
             dbc.Container(
                 fluid=True,
                 id="app-header",
