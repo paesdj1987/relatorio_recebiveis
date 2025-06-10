@@ -2,6 +2,11 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas aqui.
 
+## [v1.2.0] - 2025-06-03
+
+### Alterado
+- Alteração no Readme.md
+
 ## [v1.1.3] - 2025-05-16
 
 ### Alterado
