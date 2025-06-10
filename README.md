@@ -72,7 +72,7 @@ A aplicação foi desenvolvida com:
 
 1. Clone o repositório:
 
-- git clone https://github.com/seu-usuario/relatorio_sistema_recebiveis.git
+- git clone https://github.com/paesdj1987/relatorio_sistema_recebiveis.git
 - cd relatorio_sistema_recebiveis
 
 2. Crie um ambiente virtual (opcional, mas recomendado):
