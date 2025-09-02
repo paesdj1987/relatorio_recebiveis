@@ -2,6 +2,11 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas aqui.
 
+## [v1.2.1] - 2025-09-02
+
+### Corrigido
+- `callbacks.py` corrigido cálculo de dias úteis desconsiderando feriados
+
 ## [v1.2.0] - 2025-06-03
 
 ### Alterado
