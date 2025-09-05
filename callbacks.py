@@ -100,22 +100,52 @@ def confirm_upload(n_clicks, content1, content2):
         decoded = base64.b64decode(content_string)
         return pd.read_excel(io.BytesIO(decoded), sheet_name=sheet_name)
 
+    # escolhe a aba certa para o df1 ("TicketsChamados" ou "RELATÓRIO"/"Relatório"/"relatorio")
+    def parse_df1(contents):
+        content_type, content_string = contents.split(',')
+        decoded = base64.b64decode(content_string)
+
+        bio = io.BytesIO(decoded)
+        xls = pd.ExcelFile(bio)
+
+        # normaliza nome de aba: remove acentos, espaços e minúsculas
+        def _norm(s):
+            import unicodedata, re
+            s = unicodedata.normalize("NFKD", str(s)).encode("ascii", "ignore").decode("ascii")
+            s = re.sub(r"\s+", "", s)
+            return s.lower()
+
+        sheet_map = {_norm(name): name for name in xls.sheet_names}
+
+        for candidate in ("ticketschamados", "relatorio"):
+            if candidate in sheet_map:
+                return pd.read_excel(xls, sheet_name=sheet_map[candidate])
+
+        # fallback: primeira aba (a validação de colunas vai acusar se não servir)
+        return pd.read_excel(xls, sheet_name=0)
+
     try:
-        # Leitura dos DataFrames
-        df1 = parse_contents(content1, sheet_name="TicketsChamados")
+        # === leituras corretas, fora do parse_df1 ===
+        df1 = parse_df1(content1)
         df2 = parse_contents(content2, sheet_name=0)
 
         # ------------------ Validação de colunas obrigatórias ------------------
-        obrigatorias_df1 = {"Data Abertura","Nº Ticket"}
+        obrigatorias_df1 = {"Data Abertura", "Nº Ticket"}
         obrigatorias_df2 = {"Nº", "ORIGEM", "EMPREEND.", "DT. FINALIZAÇÃO", "DT. INICIO ETAPA"}
         faltando_df1 = obrigatorias_df1 - set(df1.columns)
         faltando_df2 = obrigatorias_df2 - set(df2.columns)
         if faltando_df1 or faltando_df2:
             msgs = []
             if faltando_df1:
-                msgs.append(f"A(s) coluna(s) {', '.join(sorted(faltando_df1))} não está(ão) presente(s) na planilha 'Relatório Geral - Tickets CRM'. Você exportou a planilha 'Relatório Geral - Tickets' faltando colunas.")
+                msgs.append(
+                    f"A(s) coluna(s) {', '.join(sorted(faltando_df1))} não está(ão) presente(s) na planilha 'Relatório Geral - Tickets CRM'. "
+                    f"Você exportou a planilha 'Relatório Geral - Tickets' faltando colunas."
+                )
             if faltando_df2:
-                msgs.append(f"A(s) coluna(s) {', '.join(sorted(faltando_df2))} não está(ão) presente(s) na planilha 'Dados'. Você exportou a planilha 'Dados' faltando colunas.")
+                msgs.append(
+                    f"A(s) coluna(s) {', '.join(sorted(faltando_df2))} não está(ão) presente(s) na planilha 'Dados'. "
+                    f"Você exportou a planilha 'Dados' faltando colunas."
+                )
             return (
                 [],
                 html.Div(" ".join(msgs),
@@ -124,17 +154,14 @@ def confirm_upload(n_clicks, content1, content2):
             )
 
         # Excluir colunas indesejadas
-        df1 = df1.drop(
-            columns=['Tipo Ticket', 'Status Ticket', 'Data Finalizado', 'Assunto'],
-            errors='ignore'
-        )
-        df2 = df2.drop(
-            columns=['DT. ABERTURA', 'EMPREEND.', 'BLOCO', 'UNIDADE','TITULO', 'SINTESE', 'RESPONSÁVEL', 'TICKET AGRUPADO', 'PRAZO TICKET', 'PRAZO ETAPA',
-                     'USUÁRIO CADASTRO', 'COD. UNIDADE CLIENTE', 'CLASSIFICACAO', 'TICKETS VINCULADOS'],
-            errors='ignore'
-        )
+        df1 = df1.drop(columns=['Tipo Ticket', 'Status Ticket', 'Data Finalizado', 'Assunto'], errors='ignore')
+        df2 = df2.drop(columns=[
+            'DT. ABERTURA', 'EMPREEND.', 'BLOCO', 'UNIDADE', 'TITULO', 'SINTESE', 'RESPONSÁVEL',
+            'TICKET AGRUPADO', 'PRAZO TICKET', 'PRAZO ETAPA', 'USUÁRIO CADASTRO',
+            'COD. UNIDADE CLIENTE', 'CLASSIFICACAO', 'TICKETS VINCULADOS'
+        ], errors='ignore')
 
-        # Renomeia as colunas originais 
+        # Renomeia para chave crua
         df1 = df1.rename(columns={'Nº Ticket': 'ticket_raw'})
         df2 = df2.rename(columns={'Nº': 'ticket_raw'})
 
@@ -150,43 +177,31 @@ def confirm_upload(n_clicks, content1, content2):
         df1['ticket_key'] = normalizar_ticket(df1['ticket_raw'])
         df2['ticket_key'] = normalizar_ticket(df2['ticket_raw'])
 
-        # Merge pela coluna chave limpa
-        merged_df = pd.merge(
-            df1,
-            df2,
-            on='ticket_key',
-            how='outer',
-            suffixes=('_df1', '_df2')
-        )
+        # Merge
+        merged_df = pd.merge(df1, df2, on='ticket_key', how='outer', suffixes=('_df1', '_df2'))
 
-        # Renomeia o 'ticket_raw_df2' (coluna original 'Nº' do df2) para 'Nº'
+        # Renomeia 'ticket_raw_df2' -> 'Nº'
         merged_df.rename(columns={'ticket_raw_df2': 'Nº'}, inplace=True)
 
-        # --- FILTRO NOVO: descarta linhas sem 'Nº' -------------------
-        merged_df = merged_df[
-            merged_df["Nº"].notna() &
-            (merged_df["Nº"].astype(str).str.strip() != "")
-        ]
+        # Descarta linhas sem 'Nº'
+        merged_df = merged_df[merged_df["Nº"].notna() & (merged_df["Nº"].astype(str).str.strip() != "")]
 
-        # Remove apenas o 'ticket_raw_df1' (vindo de df1)
+        # Remove apenas o 'ticket_raw_df1'
         merged_df.drop(columns=['ticket_raw_df1'], inplace=True, errors='ignore')
 
-        # Renomeia a chave final para 'Nº Ticket'
+        # Renomeia chave final
         merged_df.rename(columns={'ticket_key': 'Nº Ticket'}, inplace=True)
 
-
-        # Verifica se "Data Abertura" está em timestamp numérico (milissegundos) e converte se necessário
-        if 'Data Abertura' in merged_df.columns:
-            if pd.api.types.is_numeric_dtype(merged_df["Data Abertura"]):
-                merged_df["Data Abertura"] = pd.to_datetime(merged_df["Data Abertura"], unit="ms", errors="coerce")
-
+        # 'Data Abertura' em ms -> datetime (se vier numérico)
+        if 'Data Abertura' in merged_df.columns and pd.api.types.is_numeric_dtype(merged_df["Data Abertura"]):
+            merged_df["Data Abertura"] = pd.to_datetime(merged_df["Data Abertura"], unit="ms", errors="coerce")
 
         # Converter colunas de data
         for col in date_columns:
             if col in merged_df.columns:
                 merged_df[col] = pd.to_datetime(merged_df[col], dayfirst=True, errors='coerce')
 
-        # Filtro de data (apenas chamados a partir de 01/10/2024)
+        # Filtro de data (a partir de 01/10/2024)
         filtro_data = pd.Timestamp("2024-10-01 00:00:00")
         if 'Data Abertura' in merged_df.columns:
             merged_df = merged_df[merged_df['Data Abertura'] >= filtro_data]
@@ -396,7 +411,7 @@ def confirm_upload(n_clicks, content1, content2):
             "TIPO AÇÃO",
             "TIPO ORIGEM",
             "ETAPA ATUAL",
-            "MOTIVO",
+            #"MOTIVO",
             "Data Abertura",
             "DT. PREVISÃO TÉRMINO ETAPA",
             "DT. HISTORICO",

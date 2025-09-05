@@ -2,6 +2,11 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas aqui.
 
+## [v1.3.0] - 2025-09-02
+
+### Alterado
+- `callbacks.py` adaptado para aceitar o relatório de Assistência Técnica
+
 ## [v1.2.1] - 2025-09-02
 
 ### Corrigido

@@ -43,7 +43,7 @@ def create_layout(app):
                             html.Div(
                                 [
                                     html.H1(
-                                        "CRM Junix",
+                                        "Relatório Junix",
                                         style={
                                             "color": "#FFFFFF",
                                             "fontWeight": "700",
@@ -53,7 +53,7 @@ def create_layout(app):
                                         }
                                     ),
                                     html.H5(
-                                        "Relatório de Tickets",
+                                        "Relatório de Tickets de CRM e AT",
                                         style={
                                             "color": "#FFE8B0",
                                             "fontWeight": "400",
@@ -121,7 +121,7 @@ def create_layout(app):
                                                         style={"textAlign": "center"},  
                                                         children=[
                                                             dbc.Label(
-                                                                "Relatório Tickets",
+                                                                "Relatório Tickets CRM / AT",
                                                                 style={
                                                                     "textAlign": "center",
                                                                     "display": "block",
